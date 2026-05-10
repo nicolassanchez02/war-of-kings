@@ -1,0 +1,48 @@
+# Godot
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.csproj.bak
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build outputs
+*.dll
+*.pdb
+*.exe
+build/
+dist/
+
+# Logs and crash dumps
+*.log
+crash.log
+
+# Generated asset import data (regenerated from sources)
+assets/imported/
+
+# Local config
+local.config
+secrets.env

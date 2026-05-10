@@ -1,0 +1,171 @@
+{
+  "_comment": "Unit stats live here, not in C#. The simulation Database loads this at startup. To tune balance, edit this file. To add a new unit, add an entry here, then ensure the asset pipeline has a sprite for it.",
+
+  "villager": {
+    "id": 1,
+    "displayName": "Villager",
+    "age": "settlement",
+    "cost": { "wood": 0, "food": 50, "gold": 0 },
+    "trainTime": 25,
+    "populationCost": 1,
+    "stats": {
+      "hp": 25,
+      "meleeDamage": 3,
+      "meleeArmor": 0,
+      "pierceArmor": 0,
+      "attackSpeed": 2.0,
+      "moveSpeed": 0.9,
+      "visionRange": 4,
+      "carryCapacity": 10
+    },
+    "trainedAt": "town_center",
+    "abilities": ["gather", "build", "repair", "attack"]
+  },
+
+  "militia": {
+    "id": 2,
+    "displayName": "Militia",
+    "age": "settlement",
+    "cost": { "wood": 0, "food": 60, "gold": 20 },
+    "trainTime": 21,
+    "populationCost": 1,
+    "stats": {
+      "hp": 40,
+      "meleeDamage": 4,
+      "meleeArmor": 0,
+      "pierceArmor": 1,
+      "attackSpeed": 2.0,
+      "moveSpeed": 0.9,
+      "visionRange": 4
+    },
+    "trainedAt": "barracks",
+    "abilities": ["attack"]
+  },
+
+  "scout": {
+    "id": 3,
+    "displayName": "Scout",
+    "age": "settlement",
+    "cost": { "wood": 0, "food": 80, "gold": 0 },
+    "trainTime": 30,
+    "populationCost": 1,
+    "stats": {
+      "hp": 45,
+      "meleeDamage": 3,
+      "meleeArmor": 0,
+      "pierceArmor": 2,
+      "attackSpeed": 2.0,
+      "moveSpeed": 1.55,
+      "visionRange": 6
+    },
+    "trainedAt": "stable",
+    "abilities": ["attack"]
+  },
+
+  "spearman": {
+    "id": 4,
+    "displayName": "Spearman",
+    "age": "castle",
+    "cost": { "wood": 35, "food": 25, "gold": 0 },
+    "trainTime": 22,
+    "populationCost": 1,
+    "stats": {
+      "hp": 45,
+      "meleeDamage": 3,
+      "meleeArmor": 0,
+      "pierceArmor": 0,
+      "attackSpeed": 3.0,
+      "moveSpeed": 1.0,
+      "visionRange": 4,
+      "bonusVsCavalry": 15
+    },
+    "trainedAt": "barracks",
+    "abilities": ["attack"]
+  },
+
+  "archer": {
+    "id": 5,
+    "displayName": "Archer",
+    "age": "castle",
+    "cost": { "wood": 25, "food": 0, "gold": 45 },
+    "trainTime": 35,
+    "populationCost": 1,
+    "stats": {
+      "hp": 30,
+      "rangedDamage": 4,
+      "meleeArmor": 0,
+      "pierceArmor": 0,
+      "attackSpeed": 2.0,
+      "moveSpeed": 0.96,
+      "visionRange": 6,
+      "minRange": 0,
+      "maxRange": 5
+    },
+    "trainedAt": "archery_range",
+    "abilities": ["attack"]
+  },
+
+  "knight": {
+    "id": 6,
+    "displayName": "Knight",
+    "age": "castle",
+    "cost": { "wood": 0, "food": 60, "gold": 75 },
+    "trainTime": 30,
+    "populationCost": 1,
+    "stats": {
+      "hp": 100,
+      "meleeDamage": 10,
+      "meleeArmor": 2,
+      "pierceArmor": 2,
+      "attackSpeed": 1.8,
+      "moveSpeed": 1.35,
+      "visionRange": 4
+    },
+    "trainedAt": "stable",
+    "abilities": ["attack"]
+  },
+
+  "ram": {
+    "id": 7,
+    "displayName": "Ram",
+    "age": "castle",
+    "cost": { "wood": 160, "food": 0, "gold": 75 },
+    "trainTime": 36,
+    "populationCost": 2,
+    "stats": {
+      "hp": 175,
+      "meleeDamage": 2,
+      "meleeArmor": 0,
+      "pierceArmor": 180,
+      "attackSpeed": 5.0,
+      "moveSpeed": 0.5,
+      "visionRange": 3,
+      "bonusVsBuildings": 125
+    },
+    "trainedAt": "siege_workshop",
+    "abilities": ["attack"]
+  },
+
+  "onager": {
+    "id": 8,
+    "displayName": "Onager",
+    "age": "castle",
+    "cost": { "wood": 100, "food": 0, "gold": 80 },
+    "trainTime": 46,
+    "populationCost": 1,
+    "stats": {
+      "hp": 60,
+      "rangedDamage": 16,
+      "meleeArmor": 0,
+      "pierceArmor": 3,
+      "attackSpeed": 6.0,
+      "moveSpeed": 0.6,
+      "visionRange": 6,
+      "minRange": 3,
+      "maxRange": 7,
+      "areaOfEffect": 1
+    },
+    "trainedAt": "siege_workshop",
+    "abilities": ["attack"]
+  }
+}
