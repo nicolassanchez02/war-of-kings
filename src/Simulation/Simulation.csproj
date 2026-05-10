@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>WarOfKings.Simulation</RootNamespace>
+    <AssemblyName>WarOfKings.Simulation</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- This project must never reference Godot. The CI checks for accidental
+         Godot references via 'dotnet list package' to enforce this. -->
+  </PropertyGroup>
+
+</Project>

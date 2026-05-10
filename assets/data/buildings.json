@@ -1,0 +1,190 @@
+{
+  "_comment": "Building definitions. Same model as units.json. Edit here to rebalance.",
+
+  "town_center": {
+    "id": 100,
+    "displayName": "Town Center",
+    "age": "settlement",
+    "cost": { "wood": 275, "food": 0, "gold": 100 },
+    "buildTime": 150,
+    "stats": {
+      "hp": 2400,
+      "meleeArmor": 3,
+      "pierceArmor": 5,
+      "visionRange": 8,
+      "footprint": [4, 4],
+      "garrisonCapacity": 10
+    },
+    "trains": ["villager"],
+    "dropOffFor": ["wood", "food", "gold"],
+    "isCriticalForVictory": true
+  },
+
+  "house": {
+    "id": 101,
+    "displayName": "House",
+    "age": "settlement",
+    "cost": { "wood": 25, "food": 0, "gold": 0 },
+    "buildTime": 25,
+    "stats": {
+      "hp": 550,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 2,
+      "footprint": [2, 2],
+      "populationProvided": 5
+    }
+  },
+
+  "lumber_camp": {
+    "id": 102,
+    "displayName": "Lumber Camp",
+    "age": "settlement",
+    "cost": { "wood": 100, "food": 0, "gold": 0 },
+    "buildTime": 35,
+    "stats": {
+      "hp": 600,
+      "meleeArmor": 0,
+      "pierceArmor": 5,
+      "visionRange": 2,
+      "footprint": [2, 2]
+    },
+    "dropOffFor": ["wood"]
+  },
+
+  "mill": {
+    "id": 103,
+    "displayName": "Mill",
+    "age": "settlement",
+    "cost": { "wood": 100, "food": 0, "gold": 0 },
+    "buildTime": 35,
+    "stats": {
+      "hp": 600,
+      "meleeArmor": 0,
+      "pierceArmor": 5,
+      "visionRange": 2,
+      "footprint": [2, 2]
+    },
+    "dropOffFor": ["food"]
+  },
+
+  "mining_camp": {
+    "id": 104,
+    "displayName": "Mining Camp",
+    "age": "settlement",
+    "cost": { "wood": 100, "food": 0, "gold": 0 },
+    "buildTime": 35,
+    "stats": {
+      "hp": 600,
+      "meleeArmor": 0,
+      "pierceArmor": 5,
+      "visionRange": 2,
+      "footprint": [2, 2]
+    },
+    "dropOffFor": ["gold"]
+  },
+
+  "barracks": {
+    "id": 105,
+    "displayName": "Barracks",
+    "age": "settlement",
+    "cost": { "wood": 175, "food": 0, "gold": 0 },
+    "buildTime": 50,
+    "stats": {
+      "hp": 1500,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 5,
+      "footprint": [3, 3]
+    },
+    "trains": ["militia", "spearman"]
+  },
+
+  "watchtower": {
+    "id": 106,
+    "displayName": "Watchtower",
+    "age": "settlement",
+    "cost": { "wood": 50, "food": 0, "gold": 0 },
+    "buildTime": 80,
+    "stats": {
+      "hp": 850,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 8,
+      "footprint": [1, 1],
+      "rangedDamage": 5,
+      "minRange": 0,
+      "maxRange": 6,
+      "attackSpeed": 2.0
+    }
+  },
+
+  "archery_range": {
+    "id": 107,
+    "displayName": "Archery Range",
+    "age": "castle",
+    "cost": { "wood": 175, "food": 0, "gold": 0 },
+    "buildTime": 50,
+    "stats": {
+      "hp": 1500,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 5,
+      "footprint": [3, 3]
+    },
+    "trains": ["archer"]
+  },
+
+  "stable": {
+    "id": 108,
+    "displayName": "Stable",
+    "age": "castle",
+    "cost": { "wood": 175, "food": 0, "gold": 0 },
+    "buildTime": 50,
+    "stats": {
+      "hp": 1500,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 5,
+      "footprint": [3, 3]
+    },
+    "trains": ["scout", "knight"]
+  },
+
+  "siege_workshop": {
+    "id": 109,
+    "displayName": "Siege Workshop",
+    "age": "castle",
+    "cost": { "wood": 200, "food": 0, "gold": 0 },
+    "buildTime": 50,
+    "stats": {
+      "hp": 1500,
+      "meleeArmor": 0,
+      "pierceArmor": 7,
+      "visionRange": 5,
+      "footprint": [3, 3]
+    },
+    "trains": ["ram", "onager"]
+  },
+
+  "castle": {
+    "id": 110,
+    "displayName": "Castle",
+    "age": "castle",
+    "cost": { "wood": 0, "food": 0, "gold": 0, "stone": 650 },
+    "_note": "Stone is intentionally out of v1 scope. Castle either costs gold instead or is cut. Decide before M5.",
+    "buildTime": 200,
+    "stats": {
+      "hp": 4800,
+      "meleeArmor": 8,
+      "pierceArmor": 11,
+      "visionRange": 11,
+      "footprint": [4, 4],
+      "rangedDamage": 11,
+      "minRange": 0,
+      "maxRange": 8,
+      "attackSpeed": 2.0,
+      "garrisonCapacity": 20
+    }
+  }
+}
