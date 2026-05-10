@@ -30,10 +30,10 @@ Definition of done:
 - [ ] Godot project opens cleanly
 - [x] `Simulation.csproj` builds standalone (no Godot reference)
 - [x] Solution builds end to end
-- [ ] CI runs on push and goes green
+- [x] CI runs on push and goes green
 - [x] `Fixed64`, `FixedVector2`, `FixedMath` implemented and unit-tested
 - [x] `DeterministicRng` implemented and unit-tested
-- [ ] A "hello sim" test that creates a `World`, adds one entity, steps 100 ticks, and asserts state
+- [x] A "hello sim" test that creates a `World`, adds one entity, steps 100 ticks, and asserts state (see `HelloSimTests`, plus a placeholder `Unit` entity with hashable fields)
 
 ### M1: Headless deterministic world (week 3 to 4)
 

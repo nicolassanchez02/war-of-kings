@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using WarOfKings.Simulation.Commands;
 using WarOfKings.Simulation.Core;
+using WarOfKings.Simulation.Entities;
 
 namespace WarOfKings.Simulation;
 
@@ -48,6 +49,35 @@ public sealed class World
     }
 
     public IEnumerable<KeyValuePair<EntityId, object>> EntitiesOrderedById() => _entities;
+
+    /// <summary>
+    /// The single factory method for creating units. Allocates an EntityId, constructs
+    /// the Unit, registers it. Callers must never `new Unit(...)` directly — that would
+    /// bypass ID allocation and break deterministic iteration.
+    /// </summary>
+    public Unit CreateUnit(PlayerId owner, FixedVector2 position)
+    {
+        var id = AllocateEntityId();
+        var unit = new Unit(id)
+        {
+            Owner = owner,
+            Position = position,
+            Facing = Fixed64.Zero,
+            HpCurrent = Fixed64.FromInt(40),
+            HpMax = Fixed64.FromInt(40),
+        };
+        RegisterEntity(id, unit);
+        return unit;
+    }
+
+    /// <summary>Enumerate every Unit currently in the world, in EntityId order.</summary>
+    public IEnumerable<Unit> UnitsOrderedById()
+    {
+        foreach (var kvp in _entities)
+        {
+            if (kvp.Value is Unit u) yield return u;
+        }
+    }
 
     /// <summary>
     /// Advance the simulation by one tick. Applies commands for this tick, then runs all systems.

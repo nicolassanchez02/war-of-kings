@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using WarOfKings.Simulation;
 using WarOfKings.Simulation.Commands;
+using WarOfKings.Simulation.Core;
 
 namespace WarOfKings.App.Headless;
 
@@ -15,6 +16,7 @@ namespace WarOfKings.App.Headless;
 //   dotnet run --project src/App/Headless -- --ticks 1000  -> custom tick count
 //   dotnet run --project src/App/Headless -- --every 50    -> print hash every N ticks
 //   dotnet run --project src/App/Headless -- --twice       -> run the sim twice and diff
+//   dotnet run --project src/App/Headless -- --spawn 3     -> spawn N starter units and dump them
 public static class Program
 {
     public static int Main(string[] args)
@@ -23,7 +25,7 @@ public static class Program
         if (opts is null) { PrintUsage(); return 2; }
 
         Console.WriteLine($"War of Kings - headless simulation runner");
-        Console.WriteLine($"seed={opts.Seed}  ticks={opts.Ticks}  every={opts.Every}  twice={opts.Twice}");
+        Console.WriteLine($"seed={opts.Seed}  ticks={opts.Ticks}  every={opts.Every}  twice={opts.Twice}  spawn={opts.Spawn}");
         Console.WriteLine(new string('-', 60));
 
         var hashesA = RunOnce(opts);
@@ -62,6 +64,16 @@ public static class Program
         var commands = new List<Command>();
         var hashes = new List<ulong>(opts.Ticks + 1);
 
+        // Optional starter units, alternating between Player1 and Player2 on a small spread.
+        for (int i = 0; i < opts.Spawn; i++)
+        {
+            var owner = (i % 2 == 0) ? PlayerId.Player1 : PlayerId.Player2;
+            var pos = FixedVector2.FromInts(10 * i, 5 * i);
+            var u = world.CreateUnit(owner, pos);
+            Console.WriteLine($"  spawned {u.Id} for {owner} at {u.Position}");
+        }
+        if (opts.Spawn > 0) Console.WriteLine();
+
         var initial = world.ComputeStateHash();
         hashes.Add(initial);
         Console.WriteLine($"  tick {world.CurrentTick,6}: {initial:X16}  (initial)");
@@ -75,6 +87,17 @@ public static class Program
             if ((t + 1) % opts.Every == 0 || t == opts.Ticks - 1)
             {
                 Console.WriteLine($"  tick {world.CurrentTick,6}: {h:X16}");
+            }
+        }
+
+        // Final unit dump (positions are static until M1 movement lands, but the format is useful).
+        if (opts.Spawn > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  final unit state:");
+            foreach (var u in world.UnitsOrderedById())
+            {
+                Console.WriteLine($"    {u.Id} owner={u.Owner} pos={u.Position} hp={u.HpCurrent}/{u.HpMax}");
             }
         }
 
@@ -110,6 +133,10 @@ public static class Program
                 case "--twice":
                     opts.Twice = true;
                     break;
+                case "--spawn":
+                    if (++i >= args.Length || !int.TryParse(args[i], out var spawn) || spawn < 0) return null;
+                    opts.Spawn = spawn;
+                    break;
                 case "--help":
                 case "-h":
                     return null;
@@ -130,6 +157,7 @@ public static class Program
         Console.WriteLine("  --ticks <int>      number of ticks to run (default 100)");
         Console.WriteLine("  --every <int>      print hash every N ticks (default 10)");
         Console.WriteLine("  --twice            run twice and assert hash sequences match");
+        Console.WriteLine("  --spawn <int>      spawn N starter units before stepping (default 0)");
         Console.WriteLine("  -h, --help         show this");
     }
 
@@ -139,5 +167,6 @@ public static class Program
         public int Ticks { get; set; } = 100;
         public int Every { get; set; } = 10;
         public bool Twice { get; set; } = false;
+        public int Spawn { get; set; } = 0;
     }
 }
