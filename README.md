@@ -19,11 +19,22 @@ Pre-alpha. Setting up architecture and tooling. No gameplay yet.
 ## Quick start
 
 ```bash
-# Clone and open in Godot 4.3+
-git clone <repo-url>
-cd war-of-kings
-godot --editor project.godot
+# Build everything and run all tests
+dotnet test WarOfKings.sln
+
+# Run the deterministic simulation headlessly (proves the sim works)
+dotnet run --project src/App/Headless
+
+# Convenience wrappers
+bash   scripts/run-headless.sh                  # Linux/macOS/git-bash
+pwsh   scripts/run-headless.ps1                 # Windows PowerShell
+
+# Replay with the same seed twice and confirm hashes match
+dotnet run --project src/App/Headless -- --twice --ticks 1000 --every 100
 ```
+
+The Godot editor is not required to build, test, or run the headless simulation.
+It will be wired in during M2 (rendering) per `docs/SCOPE.md`.
 
 For development workflow with Claude Code, see `docs/AGENT_WORKFLOW.md`.
 
