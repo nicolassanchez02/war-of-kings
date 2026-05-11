@@ -10,11 +10,13 @@ Pre-alpha. Setting up architecture and tooling. No gameplay yet.
 
 ## Stack
 
-- Godot 4.3+ with C# (Mono)
+- Godot 4.6.2 (Mono / .NET build — exact version, the `Godot.NET.Sdk` reference in `WarOfKings.Game.csproj` must match)
 - C# 12 / .NET 8
-- Fixed-point math for deterministic simulation
-- Lockstep networking over ENet (Godot's built-in)
+- Fixed-point math for deterministic simulation (see `src/Simulation/Core/Fixed64.cs` and `FixedMath.cs`)
+- Lockstep networking over ENet (Godot's built-in) — arrives in M8
 - Asset pipeline: PNG sprites + JSON metadata, processed at import
+
+The repo has **two solutions**: `WarOfKings.sln` is CI-pure (simulation + tests + headless app, no Godot reference), and `WarOfKings.Game.sln` is dev-full (adds the Godot renderer). Open the dev-full one in your IDE; let CI keep using the pure one.
 
 ## Quick start
 
