@@ -29,7 +29,7 @@ The brief was written as if I could grind autonomously through 8+ hours of work 
 |------|-------|--------|
 | 0    | Clear the deck | ✅ done |
 | 1    | M1 close (Move + A* + Movement + tests) | ✅ done |
-| 2    | M2 Rendering | not started |
+| 2    | M2 Rendering | ✅ done (compile-clean; not visually verified — see Q-9) |
 | 3    | M3 Economy + M4 Combat | not started |
 | 4    | M5 Full roster + BALANCE | not started |
 | 5    | M6 Fog of war | not started |

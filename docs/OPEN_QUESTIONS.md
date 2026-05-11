@@ -73,6 +73,38 @@ Each entry:
 **Reversible?** trivial.
 **Nick's call?** maybe — recommend keeping as-is until profiling demands a change.
 
+## Q-9: M2 rendering was written without an interactive Godot session
+**Context:** I (Claude Code, overnight) wrote the entire M2 presentation pass — camera, terrain, unit primitives, selection, click-to-move, HUD — by editing the source files and verifying `dotnet build WarOfKings.Game.sln` succeeds. I cannot launch Godot interactively from this environment, so none of the pixel choices, input feel, or visual polish has been eyeball-tested.
+**What I picked:** Compile-clean defaults. Camera pan 600 px/sec at zoom 1.0, edge-pan margin 20 px, zoom levels {0.5, 0.75, 1.0, 1.5, 2.0}, 32 px per tile, click-select radius 25 px, terrain colors as documented in `TerrainColor()`.
+**Alternatives:** All of the above are tunable knobs. Selection click radius probably wants to be larger (units feel sticky if it's too tight). Terrain colors are programmer-art; will be replaced by Kenney tiles in Part 6.
+**Where to change it:** `src/Presentation/Main.cs` — all constants live at the top.
+**Reversible?** trivial — change a number, re-run.
+**Nick's call?** yes — launch the game, walk through the interactions, log what feels wrong. The visual-feel pass is the morning's first job after smoke test.
+
+## Q-10: F8 sprites toggle is wired but unimplemented (placeholder mode)
+**Context:** Part 2.3 of the brief asked for a Primitives ↔ Sprites toggle on F8. I wired the enum and the keybinding, but the actual sprite-loading lives in Part 6 (asset pipeline). Pressing F8 today just prints a console message.
+**What I picked:** Toggle behavior is wired; sprite rendering returns to primitives whenever a sprite is missing (which is always until Part 6).
+**Alternatives:** Implement the loader stub now even if asset bundles don't exist.
+**Where to change it:** `src/Presentation/Main.cs` (`RenderMode` enum, `HandleMouseButton`).
+**Reversible?** trivial.
+**Nick's call?** no — depends on Part 6.
+
+## Q-11: Single-file Main.cs vs the component split the brief suggested
+**Context:** The brief implied separate node classes (`CameraController`, `UnitRenderer`, `BuildingRenderer`, `Hud`, etc.). I bundled everything into one `Main.cs` because (a) it's faster to write a single file than a multi-node scene tree without a way to test the wiring, and (b) the scene tree shape can be re-architected without changing semantics. The current file is ~280 lines and organized into clear regions.
+**What I picked:** Single `Main.cs` with regioned sections for input, camera, rendering, HUD.
+**Alternatives:** Refactor into separate nodes when more complex behavior arrives in M3/M4. The split makes more sense when each component has its own state (e.g., per-building renderer with its own animation timeline).
+**Where to change it:** `src/Presentation/Main.cs` (split candidates: terrain drawing → `TerrainRenderer.cs`, unit drawing → `UnitsRenderer.cs`, HUD → `Hud.cs` as a `CanvasLayer`).
+**Reversible?** easy.
+**Nick's call?** yes — long-term you want the split; short-term, single-file is faster to iterate.
+
+## Q-Godot: C:\Godot holds the non-Mono Godot binaries; project requires Mono build
+**Context:** Mid-session you mentioned "the godot stuff lives here btw C:\Godot". What's actually at `C:\Godot` is the **plain** Godot 4.6.2 (`Godot_v4.6.2-stable_win64.exe` and the console variant). That build cannot load this project's C# scripts. The **Mono** build required by `WarOfKings.Game.csproj` lives at the original WinGet path: `C:\Users\Nick\AppData\Local\Microsoft\WinGet\Packages\GodotEngine.GodotEngine.Mono_Microsoft.Winget.Source_8wekyb3d8bbwe\Godot_v4.6.2-stable_mono_win64\`.
+**What I picked:** No change. `scripts/play.ps1` and `scripts/edit-godot.ps1` correctly point at the Mono build.
+**Alternatives:** (a) Move the Mono build to `C:\Godot\Mono\` so all Godot lives under one root, then update the two scripts. (b) Keep them as-is.
+**Where to change it:** `scripts/play.ps1` line 5, `scripts/edit-godot.ps1` line 4 (`$godot = ...`).
+**Reversible?** trivial.
+**Nick's call?** yes — if you want a single tidy Godot folder, say so and I'll relocate + update the scripts. If you just had the non-Mono build for general Godot work, leaving as-is is correct.
+
 ## Q-8: Multi-unit move spread uses a fixed 49-slot spiral
 **Context:** A `MoveCommand` carrying N units distributes them around the target tile via a precomputed spiral of 49 offsets (covers up to 7x7). If N > 49 or the 49 slots are all impassable, units fall back to the original target tile and rely on MovementSystem collisions to sort it out.
 **What I picked:** 49-slot spiral, hard-coded array in `CommandProcessor.cs`.
