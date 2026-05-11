@@ -163,6 +163,9 @@ WinGet installs Godot 4.6.2 Mono at `C:\Users\Nick\AppData\Local\Microsoft\WinGe
 ### 2026-05-10: .NET 10 SDK defaults to .slnx (XML) — CI on .NET 8 can't read it
 `dotnet new sln` on the .NET 10 SDK produces `.slnx`, an XML-format slim solution file. `dotnet sln add` against a `.sln` filename when only `.slnx` exists silently fails ("Could not find solution"). `.slnx` is not understood by .NET 8 tooling, which is what CI uses. Always pass `--format sln` when scaffolding new solutions until CI is upgraded.
 
+### 2026-05-10: `dotnet sln add` maps Release→Debug for Godot.NET.Sdk projects
+When you `dotnet sln add` a project that uses a non-default SDK (Godot.NET.Sdk is the case we hit), the .sln tooling can't introspect available configurations and silently falls back to mapping every `Release|*` to `Debug|Any CPU`. The Release build of the sln then quietly builds that project in Debug, with all the perf and diagnostic implications. Fix at the source: add `<Configurations>Debug;Release</Configurations>` to the csproj BEFORE running `dotnet sln add`. If it's already in the sln, hand-edit lines 88-93-style or remove-and-re-add.
+
 ## Pacing
 
 Aim for one milestone checklist item per session, sometimes two for small ones. A milestone is a couple of weeks of evening work. The whole game is roughly six months.

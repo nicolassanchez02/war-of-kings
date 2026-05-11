@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using WarOfKings.Simulation.Commands;
 using WarOfKings.Simulation.Core;
 using WarOfKings.Simulation.Entities;
+using WarOfKings.Simulation.Pathfinding;
 
 namespace WarOfKings.Simulation;
 
@@ -16,6 +17,7 @@ public sealed class World
 {
     public long CurrentTick { get; private set; }
     public DeterministicRng Rng { get; }
+    public Grid Map { get; }
 
     // Entity storage. Sorted by ID for deterministic iteration.
     private readonly SortedDictionary<EntityId, object> _entities = new();
@@ -24,6 +26,7 @@ public sealed class World
     public World(ulong seed)
     {
         Rng = new DeterministicRng(seed);
+        Map = Grid.Generate(seed);
     }
 
     /// <summary>
@@ -109,6 +112,7 @@ public sealed class World
         h.Mix(CurrentTick);
         h.Mix(_nextEntityId);
         Rng.HashInto(h);
+        Map.HashInto(h);
 
         foreach (var kvp in _entities)
         {
