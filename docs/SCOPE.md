@@ -53,13 +53,13 @@ Definition of done:
 **Goal:** You can see what's happening.
 
 Definition of done:
-- [ ] Camera with pan (WASD) and zoom (mouse wheel)
-- [ ] Terrain rendered from the grid
-- [ ] Unit sprite rendered at unit position, interpolated between ticks
-- [ ] Selection: click to select, drag-box to multi-select
-- [ ] Right-click issues move commands to all selected units
-- [ ] Selection highlight ring under selected units
-- [ ] Player color tinting on units
+- [x] Camera with pan (WASD) and zoom (mouse wheel)
+- [x] Terrain rendered from the grid
+- [~] Unit sprite rendered at unit position, interpolated between ticks (sprite is primitives-only this pass; interpolation deferred)
+- [x] Selection: click to select, drag-box to multi-select
+- [x] Right-click issues move commands to all selected units
+- [x] Selection highlight ring under selected units
+- [x] Player color tinting on units (primitives use blue/red; sprite tint shader deferred to Part 6)
 
 ### M3: Economy (week 7 to 9)
 
