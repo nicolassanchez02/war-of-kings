@@ -137,6 +137,22 @@ Each entry:
 **Reversible?** trivial (loader can fill the same numbers from JSON later).
 **Nick's call?** maybe — better to ship the loader as part of M5 when unit roster expands; for now editing the C# switch is fine.
 
+## Q-15: TC trains everything (no Barracks yet)
+**Context:** Real RTS pattern is "TC trains villagers; Barracks trains military." For M4 mvp I had both 'V' and 'M' hotkeys queue at the TC — so the TC trains both villagers AND militia. This is wrong long-term but simpler than wiring a second training building.
+**What I picked:** Both villager and militia train at TC. The 'M' hotkey finds P1's TC just like 'V' does.
+**Alternatives:** Add a Barracks building entity, BuildCommand to construct it, and route militia training through it.
+**Where to change it:** `src/Presentation/Main.cs` (`IssueTrainUnit`), `src/Simulation/Systems/ProductionSystem.cs` (no change needed — already type-agnostic).
+**Reversible?** easy (just need a Barracks entity + UI routing).
+**Nick's call?** yes — the moment Barracks lands, restrict TC to villagers.
+
+## Q-16: P2 is static (no AI / no auto-engage)
+**Context:** Right now P2 starts with 3 villagers + a TC and never does anything. It's target practice, not an opponent. Adding even minimal auto-engage (militia attacks nearby enemies on sight) would make P2 fight back. I held off because it's a hidden determinism risk (every behavior decision must be deterministic) and would need a fresh test.
+**What I picked:** No P2 behavior at all. Game is playable as target practice.
+**Alternatives:** (a) Minimal auto-aggression: every N ticks, military units scan within sight radius and Pursue the nearest enemy. (b) Defensive auto-retaliate: when attacked, set Pursuing against the attacker. (c) Full M7 AI (months of work).
+**Where to change it:** New system `src/Simulation/Systems/AutoAggressionSystem.cs` plus an entry in `World.Step`'s pipeline.
+**Reversible?** easy.
+**Nick's call?** yes — (a) or (b) is the right next step; pick which.
+
 ## Q-14: 'V' hotkey trains a villager at the first owned TownHall
 **Context:** A real "click building, then click train icon" flow needs building selection in the renderer (which doesn't exist yet — only unit selection does). I picked a hotkey-only path for M3: pressing V queues a villager at P1's lowest-EntityId TownHall.
 **What I picked:** 'V' key handler in `Main.cs` that finds the first P1 TC and emits a TrainCommand.
@@ -145,4 +161,4 @@ Each entry:
 **Reversible?** easy.
 **Nick's call?** yes — once you can click TCs to select them, ditch the keyboard-only flow.
 
-*End of overnight session. Total entries: 15 (Q-1 through Q-14 + Q-Godot). Append more on the next push.*
+*End of overnight session. Total entries: 17 (Q-1 through Q-16 + Q-Godot). Append more on the next push.*

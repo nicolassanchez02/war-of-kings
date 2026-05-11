@@ -6,25 +6,27 @@ This is a focused project. The goal is to ship a polished 1v1 skirmish RTS, not 
 
 ## Status
 
-M0 + M1 + M2 mechanically complete. Branch `overnight/2026-05-11-mechanical-complete` carries the M1/M2 work; tags `m1-complete` and `m2-complete` mark the milestone closes. M3 onward is the next session's work. See [PR #1](https://github.com/nicolassanchez02/war-of-kings/pull/1) and `docs/sessions/2026-05-11-02-overnight-mechanical-complete.md` for the wake-up package.
+M0 + M1 + M2 + M3 (single-age scope) + M4 MVP mechanically complete. Branch `overnight/2026-05-11-mechanical-complete`; tags `m1-complete`, `m2-complete`, `playable-mvp`. The game is playable end-to-end: gather, train, fight, win. M5+ explicitly cut per single-age scope. See [PR #1](https://github.com/nicolassanchez02/war-of-kings/pull/1) and `docs/sessions/2026-05-11-02-overnight-mechanical-complete.md` for the wake-up package.
 
-## How to play (M2 preview)
+## How to play
 
-```powershell
-pwsh scripts/smoke-test.ps1     # must be green
-pwsh scripts/play.ps1            # launches the M2 scene
-```
+Open Godot Mono → import `project.godot` → press F5. (Or `pwsh scripts/play.ps1` from the command line.)
 
-Controls in the M2 preview:
+Controls:
 
 - **WASD** or cursor near a screen edge: pan camera
 - **Mouse wheel**: zoom (5 discrete levels)
-- **Left-click on a P1 unit**: select it (drag for box-select; Shift adds to selection)
-- **Right-click on terrain**: move the selection there
+- **Left-click** a P1 unit: select. Drag = box-select. Shift = add.
+- **Right-click**: context-sensitive
+  - on open terrain → move
+  - on a Tree or BerryBush → gather (villagers walk over, chop/pick, deposit at TC, repeat)
+  - on an enemy unit or building → attack
+- **V**: queue a villager at P1's first Town Hall (cost 50 food, 25s)
+- **M**: queue a militia at the same TC (cost 60 food + 20 gold, 21s — Q-15: should be a Barracks)
 - **F3**: toggle debug panel
-- **F8**: toggle render mode (primitives ↔ sprites; sprites unavailable until Part 6 / asset pipeline lands)
+- **F8**: toggle render mode (sprites unavailable until Part 6)
 
-The HUD top bar shows tick count, state hash, FPS, and current zoom. The state hash updates every tick — if you want to verify determinism by eye, run two instances and watch the hash sequences agree.
+Win condition: destroy the enemy Town Center. VICTORY / DEFEAT banner appears when either side's last TC falls. P2 is a static target for now (no AI — see `docs/OPEN_QUESTIONS.md` Q-16).
 
 ## What's next
 
