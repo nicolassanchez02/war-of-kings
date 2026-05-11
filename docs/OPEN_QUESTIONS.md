@@ -4,11 +4,12 @@ This document is the morning review queue. Every judgment call Claude Code made 
 
 Read the entries top-to-bottom on the first pass. They are ordered roughly by impact — items at the top are the ones where changing my pick gives you the biggest game improvement for the smallest effort.
 
-## Top 3 to look at first
+## Top 4 to look at first
 
-1. **Q-9** (M2 visuals were never eyeball-tested) — first morning task. Launch the game, walk the UI, log what's wrong.
-2. **Q-2** (Brief scope vs session reality) — affects how you write tomorrow's brief. Scope smaller, please.
-3. **Q-Godot** (`C:\Godot` is non-Mono) — a one-line answer from you decides whether scripts move.
+1. **Q-17** (Sprite ↔ entity mapping) — you said you'd want to review this. Five mapping decisions; see the table.
+2. **Q-18** (buildings/ LICENSE.md has placeholder fields) — blocker for the repo ever going public. Confirm sources before then.
+3. **Q-9** (M2 visuals were never eyeball-tested) — first morning task. Launch the game, walk the UI, log what's wrong.
+4. **Q-2** (Brief scope vs session reality) — affects how you write tomorrow's brief. Scope smaller, please.
 
 ## Format
 
@@ -137,6 +138,50 @@ Each entry:
 **Reversible?** trivial (loader can fill the same numbers from JSON later).
 **Nick's call?** maybe — better to ship the loader as part of M5 when unit roster expands; for now editing the C# switch is fine.
 
+## Q-17: Sprite ↔ entity mapping for the asset import slice
+**Context:** Imported `sprites/`, `buildings/`, `iso-tiles/` from `archive/war-of-kings-online/`. Picked specific files for each entity type. These are real visual identity decisions you'll want to validate by eye when you next open the editor.
+
+**What I picked:**
+| Entity | Sprite path | Notes |
+|---|---|---|
+| Villager (UnitTypeId 1) | `assets/sources/sprites/farmer_01/farmer_01_1.png` | Gathering-villager character, frame 1. Five-frame walk cycle exists; not yet animated. |
+| Militia (UnitTypeId 2) | `assets/sources/sprites/guard/guard_1.png` | "Sovereign soldier" in Emberveil — for us, just a generic medieval guard. Four-frame walk cycle exists. |
+| Town Hall (BuildingTypeId 1) | `assets/sources/buildings/castle.png` | Large dark stone castle. 600×600 source — `DrawTextureRect` scales it to the 3×3 footprint. |
+| Tree | `assets/sources/iso-tiles/individual/forest-1.png` | One forest tile from the iso pack. 9 forest-* variants and 7 forest-dense-* variants exist — only forest-1 is wired. |
+| BerryBush | `assets/sources/buildings/wheat-fields/wheat-fenced-1.png` | Wheat field as a food node. Fits the "food coming from a tended patch" mental model better than a generic bush. 12 wheat-fenced variants exist. |
+
+**Alternatives I considered:**
+- Villager: `farmer_02/`, `villager_01/`, `villager_02/`, `blacksmith/`. Farmer_01 read most clearly as "harvester" to me; villager_01/_02 look more generic.
+- Militia: `dwarf/` (Ironborn fighter in Emberveil), `shady_guy/` (scout), `captain/` (commander). Guard felt most "default melee infantry" — the other three feel typed.
+- TC: `flag-tower-animated.png` is too small for a TC (single tower); `stone-turrets/` would mean composing multiple sprites. castle.png is one image, large, reads as a town center.
+- Tree: any of the 16 forest variants. forest-1 is the conventional "first usable" choice. forest-dense variants are visually busier — might be better for thick forest patches in M5 maps.
+- BerryBush: I could have skipped the sprite and kept primitives. Wheat fields read clearly as "food, gather here" so I wired it.
+
+**Where to change it:** All paths live as `private const string Sprite*` in `src/Presentation/Main.cs` (top of the class, just after the spriteCache field).
+
+**Reversible?** Trivial — one-line edit per entity.
+
+**Nick's call?** Yes — three things specifically:
+1. **Does the militia sprite read right for a 1v1 RTS context?** (guard_1 is a generic medieval guard, no faction colors).
+2. **Tree visual: is forest-1 enough, or do you want tree-density variation** (matching tree HP to dense/loose sprite variants)?
+3. **BerryBush as a wheat field**: yes/no. If "no, real berries," I'll switch to a primitive or look for a berry-specific tile. The wheat fits more medieval-RTS than a generic bush imo.
+
+## Q-18: buildings/ pack LICENSE.md has placeholder fields
+**Context:** `assets/sources/buildings/LICENSE.md` reads "Source: [fill in — where did grass_path_folder come from?]" and "License: [fill in — check your download source]". So we're shipping `castle.png` and the wheat-fields tiles with unconfirmed license metadata. The repo is private so today this is fine; the moment it goes public this becomes a real problem.
+**What I picked:** Imported anyway with the LICENSE.md as-is. Flagged the placeholder fields in CREDITS.md and here.
+**Alternatives:** (a) Skip the buildings/ pack until you can confirm the source. (b) Find a CC-licensed castle from Kenney or OpenGameArt to replace castle.png.
+**Where to change it:** `assets/sources/buildings/LICENSE.md` — populate Source and License fields.
+**Reversible?** Trivial — replace with a properly-licensed asset and update CREDITS.md.
+**Nick's call?** Yes — before the repo ever becomes public, confirm where castle.png and wheat-fields came from. If you can't trace the source, swap for a CC-licensed alternative.
+
+## Q-19: Top-down renderer drawing isometric tile art
+**Context:** The `iso-tiles/` pack is isometric (diamond perspective, 64×32 effective tile shape). Our renderer is top-down (axis-aligned square tiles). The `forest-1.png` tree sprite renders as drawn — without a perspective transform — which means trees look slightly tilted relative to the grid. Same for any other iso tile we might use.
+**What I picked:** Use the iso sprites as-is in top-down. Visual mismatch is small enough to be "passable medieval RTS" rather than "obviously wrong."
+**Alternatives:** (a) Restrict ourselves to perspective-neutral assets (character sprites work fine; iso tiles don't). (b) Switch the renderer to true isometric — see `docs/POSTLAUNCH.md`.
+**Where to change it:** `src/Presentation/Main.cs` — either remove the tree/bush sprite consts, or do the iso renderer rewrite.
+**Reversible?** Easy now, costly once the project has lots of iso art baked in.
+**Nick's call?** Maybe — wait until you've launched the game and seen how bad/fine the mismatch looks. If "fine," leave it. If "weird," either revert trees to primitives or schedule the iso renderer rework.
+
 ## Q-15: TC trains everything (no Barracks yet)
 **Context:** Real RTS pattern is "TC trains villagers; Barracks trains military." For M4 mvp I had both 'V' and 'M' hotkeys queue at the TC — so the TC trains both villagers AND militia. This is wrong long-term but simpler than wiring a second training building.
 **What I picked:** Both villager and militia train at TC. The 'M' hotkey finds P1's TC just like 'V' does.
@@ -161,4 +206,4 @@ Each entry:
 **Reversible?** easy.
 **Nick's call?** yes — once you can click TCs to select them, ditch the keyboard-only flow.
 
-*End of overnight session. Total entries: 17 (Q-1 through Q-16 + Q-Godot). Append more on the next push.*
+*End of overnight session. Total entries: 20 (Q-1 through Q-19 + Q-Godot). Append more on the next push.*
