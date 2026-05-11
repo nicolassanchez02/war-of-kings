@@ -3,6 +3,7 @@ using Godot;
 using WarOfKings.Simulation;
 using WarOfKings.Simulation.Commands;
 using WarOfKings.Simulation.Core;
+using WarOfKings.Simulation.Entities;
 using WarOfKings.Simulation.Pathfinding;
 
 namespace WarOfKings.Presentation;
@@ -55,24 +56,82 @@ public partial class Main : Node2D
     {
         _world = new World(0xC0FFEEUL);
 
-        // For M2 we want a friendly map so units can actually walk around. Carve a big plain
-        // arena at the center of the procedurally-generated terrain.
-        for (int y = 8; y < 32; y++)
-            for (int x = 8; x < 60; x++)
+        // M3 starter scenario: carve a flat play arena, drop a Town Hall for each player,
+        // sprinkle trees and a berry patch near each TC, and spawn a handful of villagers.
+        for (int y = 8; y < 50; y++)
+            for (int x = 8; x < 70; x++)
                 _world.Map.SetTerrain(x, y, Terrain.Plain);
 
-        for (int i = 0; i < 6; i++)
-        {
-            var owner = (i % 2 == 0) ? PlayerId.Player1 : PlayerId.Player2;
-            _world.CreateUnit(owner, FixedVector2.FromInts(12 + i * 3, 18));
-        }
+        // Starting resources.
+        _world.GetPlayer(PlayerId.Player1).Wood = Fixed64.FromInt(200);
+        _world.GetPlayer(PlayerId.Player1).Food = Fixed64.FromInt(200);
+        _world.GetPlayer(PlayerId.Player1).Gold = Fixed64.FromInt(100);
+        _world.GetPlayer(PlayerId.Player1).PopCap = 5;
+        _world.GetPlayer(PlayerId.Player2).Wood = Fixed64.FromInt(200);
+        _world.GetPlayer(PlayerId.Player2).Food = Fixed64.FromInt(200);
+        _world.GetPlayer(PlayerId.Player2).Gold = Fixed64.FromInt(100);
+        _world.GetPlayer(PlayerId.Player2).PopCap = 5;
 
-        // Center camera on the play arena (around tile (30, 20)).
+        // Player 1 base: TC at (15, 20), trees southwest, berries northwest.
+        _world.CreateBuilding(BuildingTypeId.TownHall, PlayerId.Player1, tileX: 15, tileY: 18, footprintW: 3, footprintH: 3, hpMax: 600);
+        SpawnTreeCluster(centerX: 12, centerY: 24, radius: 3, count: 8);
+        SpawnBerryPatch(centerX: 12, centerY: 14, count: 5);
+
+        // Player 2 base: TC at (55, 30), mirrored cluster.
+        _world.CreateBuilding(BuildingTypeId.TownHall, PlayerId.Player2, tileX: 55, tileY: 30, footprintW: 3, footprintH: 3, hpMax: 600);
+        SpawnTreeCluster(centerX: 60, centerY: 36, radius: 3, count: 8);
+        SpawnBerryPatch(centerX: 60, centerY: 26, count: 5);
+
+        // Starting villagers.
+        for (int i = 0; i < 3; i++)
+            _world.CreateUnit(PlayerId.Player1, FixedVector2.FromInts(19 + i, 22));
+        for (int i = 0; i < 3; i++)
+            _world.CreateUnit(PlayerId.Player2, FixedVector2.FromInts(53 - i, 34));
+
+        // Center camera on P1's base.
         var viewport = GetViewportRect().Size;
-        _cameraTopLeft = new Vector2(30 * PixelsPerTile - viewport.X / 2, 20 * PixelsPerTile - viewport.Y / 2);
+        _cameraTopLeft = new Vector2(16 * PixelsPerTile - viewport.X / 2, 22 * PixelsPerTile - viewport.Y / 2);
 
         SetProcess(true);
         SetProcessUnhandledInput(true);
+    }
+
+    private void SpawnTreeCluster(int centerX, int centerY, int radius, int count)
+    {
+        // Deterministic placement via the world RNG so two runs match.
+        int placed = 0;
+        // Scan outward in a small spiral; place on the first `count` passable tiles.
+        for (int r = 0; r <= radius && placed < count; r++)
+        {
+            for (int dy = -r; dy <= r && placed < count; dy++)
+            {
+                for (int dx = -r; dx <= r && placed < count; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != r) continue;
+                    int x = centerX + dx, y = centerY + dy;
+                    if (!_world.Map.IsPassable(x, y)) continue;
+                    if (!_world.GetOccupant(y * Grid.Width + x).IsNone) continue;
+                    _world.CreateTree(x, y);
+                    placed++;
+                }
+            }
+        }
+    }
+
+    private void SpawnBerryPatch(int centerX, int centerY, int count)
+    {
+        int placed = 0;
+        for (int dy = 0; dy < 3 && placed < count; dy++)
+        {
+            for (int dx = 0; dx < 3 && placed < count; dx++)
+            {
+                int x = centerX + dx - 1, y = centerY + dy - 1;
+                if (!_world.Map.IsPassable(x, y)) continue;
+                if (!_world.GetOccupant(y * Grid.Width + x).IsNone) continue;
+                _world.CreateBerryBush(x, y);
+                placed++;
+            }
+        }
     }
 
     public override void _Process(double delta)
@@ -249,9 +308,80 @@ public partial class Main : Node2D
     public override void _Draw()
     {
         DrawTerrain();
+        DrawBuildings();
+        DrawResources();
         DrawSelectionBox();
         DrawUnits();
         DrawHud();
+    }
+
+    private void DrawBuildings()
+    {
+        foreach (var b in _world.BuildingsOrderedById())
+        {
+            if (b.IsDestroyed) continue;
+            var topLeftWorld = new Vector2(b.TileX * PixelsPerTile, b.TileY * PixelsPerTile);
+            var sizeWorld = new Vector2(b.FootprintW * PixelsPerTile, b.FootprintH * PixelsPerTile);
+            var topLeftScreen = WorldPxToScreen(topLeftWorld);
+            var sizeScreen = sizeWorld * CurrentZoom;
+            var rect = new Rect2(topLeftScreen, sizeScreen);
+            var fill = b.Owner == PlayerId.Player1 ? new Color(0.30f, 0.45f, 0.65f) : new Color(0.65f, 0.30f, 0.30f);
+            DrawRect(rect, fill, filled: true);
+            DrawRect(rect, new Color(0, 0, 0, 0.85f), filled: false, width: 2f);
+
+            // Type label centered on the building.
+            var font = ThemeDB.FallbackFont;
+            string label = b.Type switch
+            {
+                BuildingTypeId.TownHall => "TC",
+                BuildingTypeId.House => "Hs",
+                BuildingTypeId.Barracks => "Bk",
+                BuildingTypeId.LumberCamp => "Lc",
+                BuildingTypeId.Mill => "Ml",
+                _ => "?",
+            };
+            DrawString(font, topLeftScreen + sizeScreen / 2 - new Vector2(10, -4), label,
+                HorizontalAlignment.Left, -1, (int)(14 * CurrentZoom), new Color(1, 1, 1, 0.95f));
+
+            if (b.HpCurrent < b.HpMax)
+            {
+                float frac = (float)(b.HpCurrent.ToFloatForRender() / b.HpMax.ToFloatForRender());
+                var barOrigin = topLeftScreen + new Vector2(0, -6);
+                var barSize = new Vector2(sizeScreen.X, 4);
+                DrawRect(new Rect2(barOrigin, barSize), new Color(0.2f, 0.05f, 0.05f));
+                DrawRect(new Rect2(barOrigin, new Vector2(barSize.X * frac, barSize.Y)), HpColor(frac));
+            }
+        }
+    }
+
+    private void DrawResources()
+    {
+        // Trees: dark green disk, shrinks with remaining wood (75/50/25 thresholds).
+        foreach (var t in _world.TreesOrderedById())
+        {
+            if (t.IsDepleted) continue;
+            var worldPx = new Vector2(t.TileX * PixelsPerTile + PixelsPerTile / 2, t.TileY * PixelsPerTile + PixelsPerTile / 2);
+            var screen = WorldPxToScreen(worldPx);
+            float frac = (float)(t.WoodRemaining.ToFloatForRender() / t.WoodMax.ToFloatForRender());
+            // Visual size shrinks with remaining wood: 1.0 → 0.75 → 0.5 → 0.25 stepped.
+            float scale = frac > 0.75f ? 1.0f : frac > 0.5f ? 0.85f : frac > 0.25f ? 0.65f : 0.5f;
+            float radius = 12f * scale * CurrentZoom;
+            DrawCircle(screen, radius, new Color(0.10f, 0.32f, 0.16f));
+            DrawArc(screen, radius, 0, Mathf.Tau, 24, new Color(0, 0, 0, 0.85f), 1.5f, true);
+        }
+
+        // Berry bushes: red dot cluster.
+        foreach (var bush in _world.BushesOrderedById())
+        {
+            if (bush.IsDepleted) continue;
+            var worldPx = new Vector2(bush.TileX * PixelsPerTile + PixelsPerTile / 2, bush.TileY * PixelsPerTile + PixelsPerTile / 2);
+            var screen = WorldPxToScreen(worldPx);
+            float radius = 9f * CurrentZoom;
+            DrawCircle(screen, radius, new Color(0.45f, 0.15f, 0.20f));
+            // Two tiny dots inside to look bush-ish.
+            DrawCircle(screen + new Vector2(-3, -2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
+            DrawCircle(screen + new Vector2(3, 2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
+        }
     }
 
     private void DrawTerrain()
@@ -351,6 +481,16 @@ public partial class Main : Node2D
 
         var selText = $"selected: {_selectedUnitIds.Count}";
         DrawString(font, new Vector2(16, 76), selText, HorizontalAlignment.Left, -1, 13, new Color(0.85f, 0.85f, 0.6f));
+
+        // Player 1 resource panel (top right).
+        var p1 = _world.GetPlayer(PlayerId.Player1);
+        var vp = GetViewportRect().Size;
+        float resX = vp.X - 280;
+        DrawRect(new Rect2(resX - 8, 16, 280, 80), new Color(0, 0, 0, 0.55f));
+        DrawString(font, new Vector2(resX, 36), $"Wood:  {(int)p1.Wood.ToFloatForRender()}", HorizontalAlignment.Left, -1, 15, new Color(0.85f, 0.65f, 0.40f));
+        DrawString(font, new Vector2(resX, 56), $"Food:  {(int)p1.Food.ToFloatForRender()}", HorizontalAlignment.Left, -1, 15, new Color(0.55f, 0.85f, 0.50f));
+        DrawString(font, new Vector2(resX, 76), $"Gold:  {(int)p1.Gold.ToFloatForRender()}", HorizontalAlignment.Left, -1, 15, new Color(0.95f, 0.85f, 0.30f));
+        DrawString(font, new Vector2(resX + 140, 36), $"Pop:   {p1.PopCurrent}/{p1.PopCap}", HorizontalAlignment.Left, -1, 15, new Color(0.9f, 0.9f, 0.9f));
 
         if (_showDebugPanel)
         {
