@@ -6,7 +6,32 @@ This is a focused project. The goal is to ship a polished 1v1 skirmish RTS, not 
 
 ## Status
 
-M0 complete. M1-M9 in flight on `overnight/2026-05-11-mechanical-complete` (see PR for details). Awaiting morning review.
+M0 + M1 + M2 mechanically complete. Branch `overnight/2026-05-11-mechanical-complete` carries the M1/M2 work; tags `m1-complete` and `m2-complete` mark the milestone closes. M3 onward is the next session's work. See [PR #1](https://github.com/nicolassanchez02/war-of-kings/pull/1) and `docs/sessions/2026-05-11-02-overnight-mechanical-complete.md` for the wake-up package.
+
+## How to play (M2 preview)
+
+```powershell
+pwsh scripts/smoke-test.ps1     # must be green
+pwsh scripts/play.ps1            # launches the M2 scene
+```
+
+Controls in the M2 preview:
+
+- **WASD** or cursor near a screen edge: pan camera
+- **Mouse wheel**: zoom (5 discrete levels)
+- **Left-click on a P1 unit**: select it (drag for box-select; Shift adds to selection)
+- **Right-click on terrain**: move the selection there
+- **F3**: toggle debug panel
+- **F8**: toggle render mode (primitives ↔ sprites; sprites unavailable until Part 6 / asset pipeline lands)
+
+The HUD top bar shows tick count, state hash, FPS, and current zoom. The state hash updates every tick — if you want to verify determinism by eye, run two instances and watch the hash sequences agree.
+
+## What's next
+
+- **First morning task:** smoke-test → launch the game → walk through M2 → log feedback in `docs/OPEN_QUESTIONS.md` (esp. Q-9).
+- **Roadmap:** `docs/SCOPE.md` M3 onward. The overnight wake-up note recommends scoping the next session to one milestone at a time.
+- **Open decisions for review:** `docs/OPEN_QUESTIONS.md` — 12 entries from the overnight push; top 3 flagged at the top of the doc.
+- **Balance:** `docs/BALANCE.md` will land alongside M5 (full roster); does not exist yet.
 
 ## Stack
 

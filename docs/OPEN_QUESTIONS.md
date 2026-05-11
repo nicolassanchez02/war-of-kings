@@ -4,6 +4,12 @@ This document is the morning review queue. Every judgment call  made during the 
 
 Read the entries top-to-bottom on the first pass. They are ordered roughly by impact — items at the top are the ones where changing my pick gives you the biggest game improvement for the smallest effort.
 
+## Top 3 to look at first
+
+1. **Q-9** (M2 visuals were never eyeball-tested) — first morning task. Launch the game, walk the UI, log what's wrong.
+2. **Q-2** (Brief scope vs session reality) — affects how you write tomorrow's brief. Scope smaller, please.
+3. **Q-Godot** (`C:\Godot` is non-Mono) — a one-line answer from you decides whether scripts move.
+
 ## Format
 
 Each entry:
@@ -115,4 +121,4 @@ Each entry:
 
 ---
 
-(More entries will be appended as work proceeds.)
+*End of overnight session. Total entries: 12 (Q-1 through Q-11 + Q-Godot). Append more on the next push.*
