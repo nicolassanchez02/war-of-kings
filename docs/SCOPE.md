@@ -40,13 +40,13 @@ Definition of done:
 **Goal:** A world where units can move and the sim is provably deterministic.
 
 Definition of done:
-- [ ] Grid map, 200x200 tiles, each tile has a terrain type
-- [ ] Entity factory with monotonic IDs
-- [ ] One unit type (placeholder villager)
-- [ ] Move command works: click a tile, unit walks there
-- [ ] A* pathfinding on the grid, avoiding impassable tiles
-- [ ] Two units cannot occupy the same tile
-- [ ] **Determinism test:** record 1000 ticks of random input, replay twice, assert identical state hash. Test runs in CI.
+- [x] Grid map, 200x200 tiles, each tile has a terrain type
+- [x] Entity factory with monotonic IDs
+- [x] One unit type (placeholder villager)
+- [x] Move command works: click a tile, unit walks there
+- [x] A* pathfinding on the grid, avoiding impassable tiles
+- [x] Two units cannot occupy the same tile
+- [x] **Determinism test:** record 1000 ticks of random input, replay twice, assert identical state hash. Test runs in CI.
 
 ### M2: Rendering (week 5 to 6)
 
