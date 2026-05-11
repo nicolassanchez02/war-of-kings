@@ -135,6 +135,17 @@ It will be, sometimes. Common failure modes on this project:
 
 These are not Claude Code being bad. They're the standard failure modes of any collaborator who doesn't have full context. The fix is the same: better briefs, better docs, better reviews.
 
+## Post-milestone smoke-test (do this BEFORE green-lighting the next milestone)
+
+When Claude Code reports a milestone closed, don't just take its word. Spend ~20 minutes calibrating before authorizing the next milestone. This is also the first thing to run after every M-checklist commit lands on `main`.
+
+1. **See it.** `pwsh scripts/edit-godot.ps1` (or `scripts/play.ps1`). Confirm the scene loads, the HUD tick counter advances at 20 Hz, and the state hash changes/doesn't change exactly as you'd expect for what's supposed to be happening this milestone. (At M0 the hash should be **stable tick-to-tick** — nothing is moving. At M1+ it should change every tick.)
+2. **Replay it.** `dotnet run --project src/App/Headless -- --spawn 4 --twice` (adjust `--ticks` to taste). Confirm both runs print identical hash sequences and the "DETERMINISTIC" line at the bottom. This is the determinism contract working in practice — see it with your own eyes before anything else builds on top.
+3. **Feel the tests.** `dotnet test WarOfKings.sln`. Note the duration. If it's already over 10 seconds at M0/M1, flag it now — fast tests are a feature and the suite only grows. The threshold is roughly: "tests must run faster than your coffee cools."
+4. **Skim the load-bearing diffs.** Spend five minutes reading the actual changes to `src/Simulation/Core/` (Fixed64, FixedMath, DeterministicRng, World) and anything new in `Systems/` or `Pathfinding/`. Especially: state-hash function, tick-loop ordering, A* tie-breakers, RNG seeding. Implicit choices in determinism-critical code are bug magnets months later.
+
+If any of those four fail, don't authorize the next milestone — fix what failed first.
+
 ## Trench notes
 
 These are install/toolchain quirks and architectural observations that future-you (or future Claude Code) will hit again. They don't belong in chat — chat evaporates. They don't belong in source comments — most of them aren't about any one file. They live here so they survive.
