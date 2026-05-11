@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using WarOfKings.Simulation.Core;
 using WarOfKings.Simulation.Entities;
 using WarOfKings.Simulation.Pathfinding;
+using WarOfKings.Simulation.Systems;
 
 namespace WarOfKings.Simulation.Commands;
 
@@ -51,9 +52,30 @@ public static class CommandProcessor
             {
                 case MoveCommand mc: ApplyMoveCommand(world, mc); break;
                 case GatherCommand gc: ApplyGatherCommand(world, gc); break;
-                // Attack/Build/Train arrive in M4+.
+                case TrainCommand tc: ApplyTrainCommand(world, tc); break;
+                // Attack/Build arrive in M4.
             }
         }
+    }
+
+    private static void ApplyTrainCommand(World world, TrainCommand tc)
+    {
+        if (!world.TryGetEntity(tc.ProductionBuilding, out var obj) || obj is not Entities.Building b) return;
+        if (b.IsDestroyed) return;
+        if (b.Owner != tc.Player) return;
+        if (b.ProductionQueue.Count >= Entities.Building.MaxQueueDepth) return;
+
+        // Resource check.
+        var player = world.GetPlayer(tc.Player);
+        var costFood = Fixed64.FromInt(ProductionSystem.CostFood(tc.UnitTypeId));
+        var costWood = Fixed64.FromInt(ProductionSystem.CostWood(tc.UnitTypeId));
+        var costGold = Fixed64.FromInt(ProductionSystem.CostGold(tc.UnitTypeId));
+        if (player.Food < costFood || player.Wood < costWood || player.Gold < costGold) return;
+
+        player.Food -= costFood;
+        player.Wood -= costWood;
+        player.Gold -= costGold;
+        b.ProductionQueue.Add(tc.UnitTypeId);
     }
 
     private static void ApplyGatherCommand(World world, GatherCommand gc)

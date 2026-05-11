@@ -66,11 +66,11 @@ public partial class Main : Node2D
         _world.GetPlayer(PlayerId.Player1).Wood = Fixed64.FromInt(200);
         _world.GetPlayer(PlayerId.Player1).Food = Fixed64.FromInt(200);
         _world.GetPlayer(PlayerId.Player1).Gold = Fixed64.FromInt(100);
-        _world.GetPlayer(PlayerId.Player1).PopCap = 5;
+        _world.GetPlayer(PlayerId.Player1).PopCap = 30;
         _world.GetPlayer(PlayerId.Player2).Wood = Fixed64.FromInt(200);
         _world.GetPlayer(PlayerId.Player2).Food = Fixed64.FromInt(200);
         _world.GetPlayer(PlayerId.Player2).Gold = Fixed64.FromInt(100);
-        _world.GetPlayer(PlayerId.Player2).PopCap = 5;
+        _world.GetPlayer(PlayerId.Player2).PopCap = 30;
 
         // Player 1 base: TC at (15, 20), trees southwest, berries northwest.
         _world.CreateBuilding(BuildingTypeId.TownHall, PlayerId.Player1, tileX: 15, tileY: 18, footprintW: 3, footprintH: 3, hpMax: 600);
@@ -200,6 +200,9 @@ public partial class Main : Node2D
             case InputEventKey { Pressed: true, Keycode: Key.F3 }:
                 _showDebugPanel = !_showDebugPanel;
                 break;
+            case InputEventKey { Pressed: true, Keycode: Key.V }:
+                IssueTrainVillager();
+                break;
             case InputEventMouseButton mb:
                 HandleMouseButton(mb);
                 break;
@@ -279,6 +282,30 @@ public partial class Main : Node2D
                 if (rect.HasPoint(px)) _selectedUnitIds.Add(u.Id.Value);
             }
         }
+    }
+
+    private void IssueTrainVillager()
+    {
+        // Find Player 1's first (lowest-ID) Town Hall and queue a villager there.
+        Building? tc = null;
+        foreach (var b in _world.BuildingsOrderedById())
+        {
+            if (b.Owner != PlayerId.Player1) continue;
+            if (b.Type != BuildingTypeId.TownHall) continue;
+            if (b.IsDestroyed) continue;
+            tc = b;
+            break;
+        }
+        if (tc is null) { GD.Print("No P1 Town Hall available to train at."); return; }
+
+        _pendingCommands.Add(new TrainCommand
+        {
+            ExecuteAtTick = _world.CurrentTick,
+            Player = PlayerId.Player1,
+            Sequence = _nextSequenceP1++,
+            ProductionBuilding = tc.Id,
+            UnitTypeId = 1, // villager
+        });
     }
 
     private void IssueRightClick(Vector2 screen)
@@ -496,7 +523,7 @@ public partial class Main : Node2D
         var topBar = $"tick {_world.CurrentTick}    hash 0x{_world.ComputeStateHash():X16}    FPS {Engine.GetFramesPerSecond():0}    zoom {CurrentZoom:0.00}x";
         DrawString(font, new Vector2(16, 28), topBar, HorizontalAlignment.Left, -1, 16, new Color(0.95f, 0.95f, 0.95f));
 
-        var hints = "WASD pan | wheel zoom | LMB select / drag-box | RMB move | F3 debug | F8 sprites toggle";
+        var hints = "WASD pan | wheel zoom | LMB select / drag-box | RMB move/gather | V train villager | F3 debug | F8 sprites toggle";
         DrawString(font, new Vector2(16, 52), hints, HorizontalAlignment.Left, -1, 13, new Color(0.7f, 0.7f, 0.7f));
 
         var selText = $"selected: {_selectedUnitIds.Count}";
@@ -511,6 +538,24 @@ public partial class Main : Node2D
         DrawString(font, new Vector2(resX, 56), $"Food:  {(int)p1.Food.ToFloatForRender()}", HorizontalAlignment.Left, -1, 15, new Color(0.55f, 0.85f, 0.50f));
         DrawString(font, new Vector2(resX, 76), $"Gold:  {(int)p1.Gold.ToFloatForRender()}", HorizontalAlignment.Left, -1, 15, new Color(0.95f, 0.85f, 0.30f));
         DrawString(font, new Vector2(resX + 140, 36), $"Pop:   {p1.PopCurrent}/{p1.PopCap}", HorizontalAlignment.Left, -1, 15, new Color(0.9f, 0.9f, 0.9f));
+
+        // Training status: show queue + progress for any P1 TC with work in flight.
+        float trainY = 110;
+        foreach (var b in _world.BuildingsOrderedById())
+        {
+            if (b.Owner != PlayerId.Player1) continue;
+            if (b.ProductionQueue.Count == 0) continue;
+            int unitTypeId = b.ProductionQueue[0];
+            int total = WarOfKings.Simulation.Systems.ProductionSystem.TrainTicksFor(unitTypeId);
+            int prog = b.ProductionProgressTicks;
+            float frac = total > 0 ? (float)prog / total : 0f;
+            string label = $"Training Villager  {prog}/{total} ticks  ({b.ProductionQueue.Count} in queue)";
+            DrawRect(new Rect2(16, trainY - 14, 360, 22), new Color(0, 0, 0, 0.55f));
+            DrawString(font, new Vector2(22, trainY), label, HorizontalAlignment.Left, -1, 13, new Color(0.85f, 0.85f, 0.85f));
+            DrawRect(new Rect2(380, trainY - 12, 120, 14), new Color(0.15f, 0.15f, 0.15f));
+            DrawRect(new Rect2(380, trainY - 12, 120 * frac, 14), new Color(0.55f, 0.85f, 0.50f));
+            trainY += 26;
+        }
 
         if (_showDebugPanel)
         {

@@ -121,4 +121,28 @@ Each entry:
 
 ---
 
-*End of overnight session. Total entries: 12 (Q-1 through Q-11 + Q-Godot). Append more on the next push.*
+## Q-12: Starting PopCap = 30, no Houses (single-age scope)
+**Context:** The brief calls for Houses that raise population cap by 5 each. To get to a playable M3 in one session, I skipped construction (which needs a BuildCommand + villager-build FSM extension + partial-HP construction state). Instead, both players start with PopCap = 30 — effectively "you already have your houses."
+**What I picked:** `_world.GetPlayer(P1).PopCap = 30` and same for P2, in `Main.cs` _Ready.
+**Alternatives:** Implement Houses with BuildCommand. Material work but the right long-term answer.
+**Where to change it:** `src/Presentation/Main.cs` _Ready; also `assets/data/buildings.json` for the House `populationProvided: 5`.
+**Reversible?** easy (introduce BuildCommand handler + house entity).
+**Nick's call?** maybe — fine for now if you want to feel the eco loop; revisit when training caps out.
+
+## Q-13: Hardcoded unit costs and train times in ProductionSystem
+**Context:** Brief says costs live in `assets/data/units.json` and a JSON loader feeds them in. No loader exists yet. M3 hardcodes (villager 50F/500t, militia 60F/20G/420t) inline as `ProductionSystem.CostFood/CostGold/TrainTicksFor`.
+**What I picked:** Inline switch-expressions in ProductionSystem.
+**Alternatives:** Build a JSON loader now and bind these from `units.json`.
+**Where to change it:** `src/Simulation/Systems/ProductionSystem.cs` (`CostFood`, `CostWood`, `CostGold`, `TrainTicksFor`, `PopCostFor`).
+**Reversible?** trivial (loader can fill the same numbers from JSON later).
+**Nick's call?** maybe — better to ship the loader as part of M5 when unit roster expands; for now editing the C# switch is fine.
+
+## Q-14: 'V' hotkey trains a villager at the first owned TownHall
+**Context:** A real "click building, then click train icon" flow needs building selection in the renderer (which doesn't exist yet — only unit selection does). I picked a hotkey-only path for M3: pressing V queues a villager at P1's lowest-EntityId TownHall.
+**What I picked:** 'V' key handler in `Main.cs` that finds the first P1 TC and emits a TrainCommand.
+**Alternatives:** (a) Click on a TC to select it, then click a "Train Villager" button in a building command panel. The right long-term UX. (b) Multiple hotkeys for different buildings (V/M/A/K).
+**Where to change it:** `src/Presentation/Main.cs` (`IssueTrainVillager`, `_UnhandledInput`).
+**Reversible?** easy.
+**Nick's call?** yes — once you can click TCs to select them, ditch the keyboard-only flow.
+
+*End of overnight session. Total entries: 15 (Q-1 through Q-14 + Q-Godot). Append more on the next push.*

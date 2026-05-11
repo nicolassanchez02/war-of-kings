@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using WarOfKings.Simulation.Core;
 
 namespace WarOfKings.Simulation.Entities;
@@ -43,6 +44,15 @@ public sealed class Building : IHashable
 
     public bool IsDestroyed => HpCurrent.Raw <= 0;
 
+    /// <summary>
+    /// Pending training queue: each entry is a UnitTypeId. The building trains entries in
+    /// FIFO order. M3 supports a single concurrent training slot (the head of the queue) with
+    /// up to 5 queued units behind it.
+    /// </summary>
+    public List<int> ProductionQueue { get; } = new();
+    public int ProductionProgressTicks { get; set; }
+    public const int MaxQueueDepth = 5;
+
     public Building(EntityId id, BuildingTypeId type, PlayerId owner,
                     int tileX, int tileY, int footprintW, int footprintH,
                     Fixed64 hpMax)
@@ -68,5 +78,8 @@ public sealed class Building : IHashable
         hash.Mix((long)FootprintH);
         hash.Mix(HpCurrent.Raw);
         hash.Mix(HpMax.Raw);
+        hash.Mix((long)ProductionQueue.Count);
+        for (int i = 0; i < ProductionQueue.Count; i++) hash.Mix((long)ProductionQueue[i]);
+        hash.Mix((long)ProductionProgressTicks);
     }
 }

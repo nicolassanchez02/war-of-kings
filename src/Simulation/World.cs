@@ -38,6 +38,7 @@ public sealed class World
 
     private readonly GatheringSystem _gathering = new();
     private readonly MovementSystem _movement = new();
+    private readonly ProductionSystem _production = new();
 
     public World(ulong seed)
     {
@@ -96,6 +97,7 @@ public sealed class World
         };
         RegisterEntity(id, unit);
         SetOccupant(tileIdx, id);
+        GetPlayer(owner).PopCurrent += 1;
         return unit;
     }
 
@@ -200,10 +202,14 @@ public sealed class World
     {
         CommandProcessor.Apply(this, commandsForThisTick);
         // Order: behavior decisions first (they may set new pending paths or clear paths),
-        // then low-level movement. Reversing this order means MovementSystem consumes a path
-        // before BehaviorSystem decides to abandon it.
+        // then low-level movement, then production (which mints new entities). Reversing the
+        // first two means MovementSystem consumes a path before BehaviorSystem decides to
+        // abandon it; doing production before movement means newborn units would be visible
+        // to MovementSystem on tick zero of their life, with no path or behavior — fine, but
+        // we keep production last so newborns get a full tick of state before they move.
         _gathering.Tick(this);
         _movement.Tick(this);
+        _production.Tick(this);
         CurrentTick++;
     }
 

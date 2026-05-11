@@ -66,17 +66,17 @@ Definition of done:
 **Goal:** The economy loop works and feels good. This is the most important milestone.
 
 Definition of done:
-- [ ] Trees, gold mines, berry bushes exist on the map
-- [ ] Villager gathers wood from trees (walk, chop, carry, deposit, repeat)
-- [ ] Villager gathers food from berries
-- [ ] Villager gathers gold from mines
-- [ ] Town Center, Lumber Camp, Mill, Mining Camp built and serve as drop-offs
-- [ ] Resources display in a HUD
-- [ ] Trees deplete and disappear
-- [ ] Villagers auto-target the nearest equivalent resource when one depletes
-- [ ] Build menu: select villager, click building icon, click placement, villager walks and builds
-- [ ] Houses raise population cap
-- [ ] Town Center trains villagers (queue, cost, time)
+- [x] Trees, ~~gold mines~~, berry bushes exist on the map (gold mines deferred per single-age scope)
+- [x] Villager gathers wood from trees (walk, chop, carry, deposit, repeat)
+- [x] Villager gathers food from berries
+- [ ] Villager gathers gold from mines _(out of single-age scope)_
+- [x] Town Center serves as drop-off _(Lumber Camp / Mill / Mining Camp not built; TC accepts all)_
+- [x] Resources display in a HUD
+- [x] Trees deplete and disappear (visual shrink at 75/50/25)
+- [x] Villagers auto-target the nearest equivalent resource when one depletes
+- [ ] Build menu: select villager, click building icon, click placement, villager walks and builds _(deferred)_
+- [ ] Houses raise population cap _(deferred — starting cap raised to 30)_
+- [x] Town Center trains villagers (queue, cost, time)
 
 ### M4: Combat (week 10 to 11)
 
