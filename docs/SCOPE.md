@@ -83,14 +83,14 @@ Definition of done:
 **Goal:** Things can fight.
 
 Definition of done:
-- [ ] Militia trains from Barracks
-- [ ] Two militia from different players will attack each other on sight
-- [ ] HP, damage, armor, attack speed all working from data tables
-- [ ] Attack-move command (right-click empty ground while holding A)
-- [ ] Stances (Aggressive, Defensive, Hold Ground)
-- [ ] Units die, leave a corpse for a few seconds, disappear
-- [ ] Buildings take damage and can be destroyed
-- [ ] Destroying the Town Center wins the game (placeholder win screen)
+- [~] Militia trains from ~~Barracks~~ Town Hall (Barracks deferred — Q-15)
+- [ ] Two militia from different players will attack each other on sight _(no auto-engage; explicit AttackCommand only)_
+- [x] HP, damage, armor, attack speed all working _(hardcoded in UnitStats; data-table loader deferred — Q-13)_
+- [ ] Attack-move command _(deferred)_
+- [ ] Stances _(deferred — assumes default Aggressive for everything)_
+- [~] Units die, ~~leave a corpse for a few seconds~~, disappear (no corpse fade)
+- [x] Buildings take damage and can be destroyed
+- [x] Destroying the Town Center wins the game (placeholder banner in renderer)
 
 ### M5: Full roster (week 12 to 14)
 
