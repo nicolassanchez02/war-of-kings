@@ -16,17 +16,19 @@ The brief was written as if I could grind autonomously through 8+ hours of work 
 ## What's now true (running log — updated as work proceeds)
 
 - New long-lived branch `overnight/2026-05-11-mechanical-complete` exists
+- Draft PR #1 open on origin
 - Smoke-test scripts (`scripts/smoke-test.{ps1,sh}`) and pre-push hook (`scripts/hooks/pre-push` + `scripts/install-hooks.ps1`) added
 - README "Status" line updated
-- `docs/OPEN_QUESTIONS.md` created with format spec and initial entries (Q-1 through Q-3)
+- `docs/OPEN_QUESTIONS.md` created and seeded with Q-1 through Q-8
 - This session note created
+- **M1 COMPLETE.** `src/Simulation/Pathfinding/AStar.cs`, `src/Simulation/Systems/MovementSystem.cs`, `src/Simulation/Commands/CommandProcessor.cs` all live. World.Step now runs the pipeline. Determinism test de-skipped and 3 new determinism scenarios added (100-unit pathing, narrow-corridor contention, mid-walk path invalidation). All 75 tests green. `docs/SCOPE.md` M1 checklist checked off. `docs/ARCHITECTURE.md` updated with Phase-1 pathfinding details and the re-pathing contract.
 
 ## Part-by-part status
 
 | Part | Title | Status |
 |------|-------|--------|
-| 0    | Clear the deck | in progress |
-| 1    | M1 close (Move + A* + Movement + tests) | not started |
+| 0    | Clear the deck | ✅ done |
+| 1    | M1 close (Move + A* + Movement + tests) | ✅ done |
 | 2    | M2 Rendering | not started |
 | 3    | M3 Economy + M4 Combat | not started |
 | 4    | M5 Full roster + BALANCE | not started |

@@ -41,6 +41,46 @@ Each entry:
 **Reversible?** trivial — one command.
 **Nick's call?** yes — you know your GitButler workflow; reinstate when ready.
 
+## Q-4: Villager move speed default (M1 placeholder)
+**Context:** Units need a per-tick movement speed. Picked 0.045 tiles/tick (≈ 0.9 tiles/sec at 20 Hz) as a villager-ish default. Stored as `Fixed64.FromRaw(2949)`.
+**What I picked:** `MoveSpeedPerTick = Fixed64.FromRaw(2949)` for every unit by default.
+**Alternatives:** Per-unit-type speeds loaded from `units.json` (the right long-term answer; deferred to M3/M5).
+**Where to change it:** `src/Simulation/Entities/Unit.cs` (`MoveSpeedPerTick` field), eventually `assets/data/units.json`.
+**Reversible?** trivial (per-unit), easy (JSON-driven).
+**Nick's call?** maybe — this is a feel knob; you'll set it once you can actually watch units walk in M2.
+
+## Q-5: Wait/Repath thresholds (5 wait ticks, 3 repaths per 100-tick window)
+**Context:** The brief specified exactly these numbers and I used them as-is. They're the bound between "I'm patient, the corridor will clear" and "I'm stuck, give up." Feels right but never tested in a real match.
+**What I picked:** `WaitTicksBeforeRepath = 5`, `MaxRepathsInWindow = 3`, `RepathWindowLengthTicks = 100` (all in `MovementSystem.cs`).
+**Alternatives:** Tighter (more responsive but more thrashing) or looser (more patient but units feel "stuck"). Best tuned in the test arena (Part 3.7) once that lands.
+**Where to change it:** `src/Simulation/Systems/MovementSystem.cs` constants.
+**Reversible?** trivial.
+**Nick's call?** maybe — eyeball test once you can watch units in M2.
+
+## Q-6: A* path-smoothing flag default OFF
+**Context:** The brief asked for an optional string-pulling smoother that drops mid-path waypoints when a straight line is unobstructed. Off by default because enabling it changes state hashes, and we want the determinism suite to lock in the un-smoothed behavior first.
+**What I picked:** `AStar.EnableSmoothing = false` default. Smoother implemented but unused.
+**Alternatives:** Default-on with a separate set of determinism tests that pin smoothed-path hashes; more setup but smoother visuals.
+**Where to change it:** `src/Simulation/Pathfinding/AStar.cs` (the bool property), and any caller that wants smoothing.
+**Reversible?** easy (flip a flag, re-record determinism hashes).
+**Nick's call?** no for now; revisit in M2 when you can see the zig-zags.
+
+## Q-7: Hashing the full path on every Unit hash
+**Context:** `Unit.HashInto` mixes the entire `Path` list contents into the state hash. This is the safest "every gameplay-relevant byte is in the hash" rule, but for 100 moving units with ~100-tile paths, that's 10k extra mixes per tick. Cheap (FNV is fast), but worth flagging.
+**What I picked:** Hash the full path. Safety over speed at M1; revisit only if profiling shows it matters.
+**Alternatives:** Hash only `Path.Count` + `PathIndex` + `DestinationTileIdx` and rely on A* determinism to make the actual path content redundant. Faster, but fragile: any future tweak to A* that produces a different (still-valid) path would silently desync replays.
+**Where to change it:** `src/Simulation/Entities/Unit.cs` (`HashInto`).
+**Reversible?** trivial.
+**Nick's call?** maybe — recommend keeping as-is until profiling demands a change.
+
+## Q-8: Multi-unit move spread uses a fixed 49-slot spiral
+**Context:** A `MoveCommand` carrying N units distributes them around the target tile via a precomputed spiral of 49 offsets (covers up to 7x7). If N > 49 or the 49 slots are all impassable, units fall back to the original target tile and rely on MovementSystem collisions to sort it out.
+**What I picked:** 49-slot spiral, hard-coded array in `CommandProcessor.cs`.
+**Alternatives:** Generate spiral on demand (handles any group size), or use a flow-field-style cluster solver (overkill until M3).
+**Where to change it:** `src/Simulation/Commands/CommandProcessor.cs` (`SpiralOffsets`).
+**Reversible?** easy.
+**Nick's call?** no — M1 group sizes are small; revisit only if v1 has 50+ unit selections.
+
 ---
 
 (More entries will be appended as work proceeds.)
