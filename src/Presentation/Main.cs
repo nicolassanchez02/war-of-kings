@@ -12,9 +12,10 @@ namespace WarOfKings.Presentation;
 /// M2 stand-in. Owns the simulation, ticks it at 20 Hz, renders terrain + units, handles
 /// camera (WASD pan + wheel zoom), and routes left/right click to selection + move commands.
 ///
-/// Render modes: <see cref="RenderMode.Primitives"/> is the only mode wired today (shapes &amp;
-/// colors). The sprite mode is reserved for Part 6 (Kenney asset pipeline). F8 toggles the
-/// enum but only logs when no sprites are available.
+/// Render modes: <see cref="RenderMode.Primitives"/> uses programmer-art shapes; <see cref="RenderMode.Sprites"/>
+/// loads commissioned sprites + iso-tile art from <c>assets/sources/</c> via <c>GetSprite()</c>. F8 toggles
+/// between them at runtime. Sprite loading is best-effort: any missing/unimported asset silently falls back
+/// to its primitive counterpart per tile/unit/building — no crash, no log spam.
 ///
 /// Visual fidelity disclaimer: this file was written without an interactive Godot session
 /// available for review. Behaviors (camera pixel rates, exact zoom levels, tile colors,
@@ -51,6 +52,37 @@ public partial class Main : Node2D
 
     // Pending commands for the next tick.
     private readonly List<Command> _pendingCommands = new();
+
+    // --- Sprite cache (M3 slice 4: real art) ---
+
+    // Map of res:// path -> loaded Texture2D, or null if load failed. Once a miss is cached,
+    // we never re-attempt the load — that keeps the per-frame cost zero on missing assets and
+    // makes the F8 toggle silently fall back to primitives. This is the "never crash on a
+    // missing sprite" contract Nick asked for.
+    private readonly Dictionary<string, Texture2D?> _spriteCache = new();
+
+    // Sprite paths (resolved relative to res://). Decisions are documented in OPEN_QUESTIONS Q-17.
+    // Files live in `assets/sources/<pack>/...` so Godot's importer picks them up on first project
+    // open. Until the editor has imported them, ResourceLoader returns null and the renderer falls
+    // back to primitives — no crash, no warning spam.
+    private const string SpriteVillager = "res://assets/sources/sprites/farmer_01/farmer_01_1.png";
+    private const string SpriteMilitia = "res://assets/sources/sprites/guard/guard_1.png";
+    private const string SpriteTownHall = "res://assets/sources/buildings/castle.png";
+    private const string SpriteTree = "res://assets/sources/iso-tiles/individual/forest-1.png";
+    private const string SpriteBerryBush = "res://assets/sources/buildings/wheat-fields/wheat-fenced-1.png";
+
+    private Texture2D? GetSprite(string resourcePath)
+    {
+        if (_spriteCache.TryGetValue(resourcePath, out var cached)) return cached;
+        // ResourceLoader.Load returns null when the path doesn't resolve to an importable
+        // asset. Godot logs a warning the first time but no exception is thrown. We swallow
+        // it and cache null forever after.
+        Texture2D? tex;
+        try { tex = ResourceLoader.Load<Texture2D>(resourcePath); }
+        catch { tex = null; }
+        _spriteCache[resourcePath] = tex;
+        return tex;
+    }
 
     public override void _Ready()
     {
@@ -195,7 +227,7 @@ public partial class Main : Node2D
         {
             case InputEventKey { Pressed: true, Keycode: Key.F8 }:
                 _renderMode = _renderMode == RenderMode.Primitives ? RenderMode.Sprites : RenderMode.Primitives;
-                GD.Print($"Render mode -> {_renderMode} (sprites pipeline lands in Part 6)");
+                GD.Print($"Render mode -> {_renderMode} (sprites fall back to primitives per-tile if asset missing)");
                 break;
             case InputEventKey { Pressed: true, Keycode: Key.F3 }:
                 _showDebugPanel = !_showDebugPanel;
@@ -432,23 +464,45 @@ public partial class Main : Node2D
             var topLeftScreen = WorldPxToScreen(topLeftWorld);
             var sizeScreen = sizeWorld * CurrentZoom;
             var rect = new Rect2(topLeftScreen, sizeScreen);
-            var fill = b.Owner == PlayerId.Player1 ? new Color(0.30f, 0.45f, 0.65f) : new Color(0.65f, 0.30f, 0.30f);
-            DrawRect(rect, fill, filled: true);
-            DrawRect(rect, new Color(0, 0, 0, 0.85f), filled: false, width: 2f);
 
-            // Type label centered on the building.
-            var font = ThemeDB.FallbackFont;
-            string label = b.Type switch
+            // Sprite first (Sprites mode + asset loaded). Falls back to colored rect.
+            bool drewSprite = false;
+            if (_renderMode == RenderMode.Sprites)
             {
-                BuildingTypeId.TownHall => "TC",
-                BuildingTypeId.House => "Hs",
-                BuildingTypeId.Barracks => "Bk",
-                BuildingTypeId.LumberCamp => "Lc",
-                BuildingTypeId.Mill => "Ml",
-                _ => "?",
-            };
-            DrawString(font, topLeftScreen + sizeScreen / 2 - new Vector2(10, -4), label,
-                HorizontalAlignment.Left, -1, (int)(14 * CurrentZoom), new Color(1, 1, 1, 0.95f));
+                var path = b.Type switch { BuildingTypeId.TownHall => SpriteTownHall, _ => null };
+                var tex = path != null ? GetSprite(path) : null;
+                if (tex != null)
+                {
+                    // castle.png is 600x600; DrawTextureRect scales it to fit the footprint.
+                    DrawTextureRect(tex, rect, tile: false);
+                    drewSprite = true;
+                }
+            }
+            if (!drewSprite)
+            {
+                var fill = b.Owner == PlayerId.Player1 ? new Color(0.30f, 0.45f, 0.65f) : new Color(0.65f, 0.30f, 0.30f);
+                DrawRect(rect, fill, filled: true);
+                DrawRect(rect, new Color(0, 0, 0, 0.85f), filled: false, width: 2f);
+
+                // Type label centered on the building (primitive mode only — sprite mode the sprite carries identity).
+                var font = ThemeDB.FallbackFont;
+                string label = b.Type switch
+                {
+                    BuildingTypeId.TownHall => "TC",
+                    BuildingTypeId.House => "Hs",
+                    BuildingTypeId.Barracks => "Bk",
+                    BuildingTypeId.LumberCamp => "Lc",
+                    BuildingTypeId.Mill => "Ml",
+                    _ => "?",
+                };
+                DrawString(font, topLeftScreen + sizeScreen / 2 - new Vector2(10, -4), label,
+                    HorizontalAlignment.Left, -1, (int)(14 * CurrentZoom), new Color(1, 1, 1, 0.95f));
+            }
+
+            // Owner-color outline always drawn on top so it's clear which TC belongs to whom
+            // regardless of render mode.
+            var ownerRing = b.Owner == PlayerId.Player1 ? new Color(0.55f, 0.78f, 0.95f, 0.7f) : new Color(0.95f, 0.45f, 0.45f, 0.7f);
+            DrawRect(rect, ownerRing, filled: false, width: 2.5f);
 
             if (b.HpCurrent < b.HpMax)
             {
@@ -463,31 +517,61 @@ public partial class Main : Node2D
 
     private void DrawResources()
     {
-        // Trees: dark green disk, shrinks with remaining wood (75/50/25 thresholds).
+        // Trees: sprite if available, otherwise a dark-green disk that shrinks with remaining wood.
         foreach (var t in _world.TreesOrderedById())
         {
             if (t.IsDepleted) continue;
             var worldPx = new Vector2(t.TileX * PixelsPerTile + PixelsPerTile / 2, t.TileY * PixelsPerTile + PixelsPerTile / 2);
             var screen = WorldPxToScreen(worldPx);
             float frac = (float)(t.WoodRemaining.ToFloatForRender() / t.WoodMax.ToFloatForRender());
-            // Visual size shrinks with remaining wood: 1.0 → 0.75 → 0.5 → 0.25 stepped.
             float scale = frac > 0.75f ? 1.0f : frac > 0.5f ? 0.85f : frac > 0.25f ? 0.65f : 0.5f;
-            float radius = 12f * scale * CurrentZoom;
-            DrawCircle(screen, radius, new Color(0.10f, 0.32f, 0.16f));
-            DrawArc(screen, radius, 0, Mathf.Tau, 24, new Color(0, 0, 0, 0.85f), 1.5f, true);
+
+            bool drewSprite = false;
+            if (_renderMode == RenderMode.Sprites)
+            {
+                var tex = GetSprite(SpriteTree);
+                if (tex != null)
+                {
+                    float drawSize = PixelsPerTile * 1.4f * scale * CurrentZoom;
+                    var rect = new Rect2(screen.X - drawSize / 2, screen.Y - drawSize / 2, drawSize, drawSize);
+                    DrawTextureRect(tex, rect, tile: false);
+                    drewSprite = true;
+                }
+            }
+            if (!drewSprite)
+            {
+                float radius = 12f * scale * CurrentZoom;
+                DrawCircle(screen, radius, new Color(0.10f, 0.32f, 0.16f));
+                DrawArc(screen, radius, 0, Mathf.Tau, 24, new Color(0, 0, 0, 0.85f), 1.5f, true);
+            }
         }
 
-        // Berry bushes: red dot cluster.
+        // Berry bushes: sprite if available, otherwise a red dot cluster.
         foreach (var bush in _world.BushesOrderedById())
         {
             if (bush.IsDepleted) continue;
             var worldPx = new Vector2(bush.TileX * PixelsPerTile + PixelsPerTile / 2, bush.TileY * PixelsPerTile + PixelsPerTile / 2);
             var screen = WorldPxToScreen(worldPx);
-            float radius = 9f * CurrentZoom;
-            DrawCircle(screen, radius, new Color(0.45f, 0.15f, 0.20f));
-            // Two tiny dots inside to look bush-ish.
-            DrawCircle(screen + new Vector2(-3, -2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
-            DrawCircle(screen + new Vector2(3, 2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
+
+            bool drewSprite = false;
+            if (_renderMode == RenderMode.Sprites)
+            {
+                var tex = GetSprite(SpriteBerryBush);
+                if (tex != null)
+                {
+                    float drawSize = PixelsPerTile * 1.1f * CurrentZoom;
+                    var rect = new Rect2(screen.X - drawSize / 2, screen.Y - drawSize / 2, drawSize, drawSize);
+                    DrawTextureRect(tex, rect, tile: false);
+                    drewSprite = true;
+                }
+            }
+            if (!drewSprite)
+            {
+                float radius = 9f * CurrentZoom;
+                DrawCircle(screen, radius, new Color(0.45f, 0.15f, 0.20f));
+                DrawCircle(screen + new Vector2(-3, -2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
+                DrawCircle(screen + new Vector2(3, 2) * CurrentZoom, 2.5f * CurrentZoom, new Color(0.85f, 0.25f, 0.30f));
+            }
         }
     }
 
@@ -539,19 +623,40 @@ public partial class Main : Node2D
                 DrawArc(screen, radius + 4, 0, Mathf.Tau, 36, new Color(1f, 1f, 0.6f, 0.85f), 2.5f, true);
             }
 
-            if (u.UnitTypeId == 2)
+            // Sprite path: try first if F8 has us in Sprites mode. On miss we fall through to
+            // the primitive draw below, so the contract is "sprite if available, primitive always".
+            bool drewSprite = false;
+            if (_renderMode == RenderMode.Sprites)
             {
-                // Militia: filled square.
-                var sz = radius * 1.5f;
-                var rect = new Rect2(screen.X - sz / 2, screen.Y - sz / 2, sz, sz);
-                DrawRect(rect, color, filled: true);
-                DrawRect(rect, new Color(0, 0, 0, 0.7f), filled: false, width: 1.5f);
+                var path = u.UnitTypeId switch { 1 => SpriteVillager, 2 => SpriteMilitia, _ => null };
+                var tex = path != null ? GetSprite(path) : null;
+                if (tex != null)
+                {
+                    // Sprites are commissioned at 32x32; render to ~3x the primitive radius for
+                    // visual parity with circles. The texture sits centered on the unit's tile.
+                    float drawSize = radius * 3.0f;
+                    var rect = new Rect2(screen.X - drawSize / 2, screen.Y - drawSize / 2, drawSize, drawSize);
+                    DrawTextureRect(tex, rect, tile: false);
+                    drewSprite = true;
+                }
             }
-            else
+
+            if (!drewSprite)
             {
-                // Villager (and any unknown type): filled circle.
-                DrawCircle(screen, radius, color);
-                DrawArc(screen, radius, 0, Mathf.Tau, 32, new Color(0, 0, 0, 0.6f), 1.5f, true);
+                if (u.UnitTypeId == 2)
+                {
+                    // Militia: filled square.
+                    var sz = radius * 1.5f;
+                    var rect = new Rect2(screen.X - sz / 2, screen.Y - sz / 2, sz, sz);
+                    DrawRect(rect, color, filled: true);
+                    DrawRect(rect, new Color(0, 0, 0, 0.7f), filled: false, width: 1.5f);
+                }
+                else
+                {
+                    // Villager (and any unknown type): filled circle.
+                    DrawCircle(screen, radius, color);
+                    DrawArc(screen, radius, 0, Mathf.Tau, 32, new Color(0, 0, 0, 0.6f), 1.5f, true);
+                }
             }
 
             // HP bar above unit (always-on for now; M5 will dim when full).

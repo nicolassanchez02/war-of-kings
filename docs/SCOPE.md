@@ -170,6 +170,10 @@ Definition of done:
 - [ ] Itch.io page set up
 - [ ] Release
 
+## Post-launch wishlist
+
+Tracked in `docs/POSTLAUNCH.md`. Anything that doesn't belong in v1 but is worth not forgetting goes there.
+
 ## What gets added if v1 ships and people care
 
 (Don't work on these. Don't even think about them. They live here only so you can stop thinking about them.)
