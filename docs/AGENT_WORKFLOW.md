@@ -135,6 +135,23 @@ It will be, sometimes. Common failure modes on this project:
 
 These are not Claude Code being bad. They're the standard failure modes of any collaborator who doesn't have full context. The fix is the same: better briefs, better docs, better reviews.
 
+## Trench notes
+
+These are install/toolchain quirks and architectural observations that future-you (or future Claude Code) will hit again. They don't belong in chat — chat evaporates. They don't belong in source comments — most of them aren't about any one file. They live here so they survive.
+
+When a session uncovers one, add it here. Format: short title, one paragraph, dated. Prune entries that have been superseded.
+
+Also reproduce the *current* list (verbatim) under a `## Trench notes` heading at the bottom of each session note in `docs/sessions/`. That keeps the knowledge tethered to the session that proved it.
+
+### 2026-05-10: WinGet's `Links\godot.exe` shim is broken
+WinGet installs Godot 4.6.2 Mono at `C:\Users\Nick\AppData\Local\Microsoft\WinGet\Packages\GodotEngine.GodotEngine.Mono_…\Godot_v4.6.2-stable_mono_win64\`, and creates a `Links\godot.exe` shim. The shim **does not forward `--headless --quit` correctly** — Godot hangs forever and the assemblies-not-found error masks the symptom. Always point scripts at the real exe directly. `scripts/play.ps1` and `scripts/edit-godot.ps1` already do this; if Godot is reinstalled to a different path, update the `$godot` line in both files.
+
+### 2026-05-10: Two solutions, two purposes
+`WarOfKings.sln` is the CI-pure solution: simulation + tests + headless app. It must never reference the Godot project so CI doesn't need the Godot.NET.Sdk runtime to build. `WarOfKings.Game.sln` is the dev-full solution: the same projects plus `WarOfKings.Game.csproj`. Open this one in Rider/VS for normal day-to-day work. The CI workflow targets `WarOfKings.sln` explicitly; if you change CI to target `WarOfKings.Game.sln` the build agent will need Godot installed.
+
+### 2026-05-10: .NET 10 SDK defaults to .slnx (XML) — CI on .NET 8 can't read it
+`dotnet new sln` on the .NET 10 SDK produces `.slnx`, an XML-format slim solution file. `dotnet sln add` against a `.sln` filename when only `.slnx` exists silently fails ("Could not find solution"). `.slnx` is not understood by .NET 8 tooling, which is what CI uses. Always pass `--format sln` when scaffolding new solutions until CI is upgraded.
+
 ## Pacing
 
 Aim for one milestone checklist item per session, sometimes two for small ones. A milestone is a couple of weeks of evening work. The whole game is roughly six months.
