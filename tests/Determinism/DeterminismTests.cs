@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using WarOfKings.Simulation;
 using WarOfKings.Simulation.Commands;
 using WarOfKings.Simulation.Core;
+using WarOfKings.Simulation.Entities;
 using WarOfKings.Simulation.Pathfinding;
 using Xunit;
 
@@ -92,6 +93,37 @@ public class DeterminismTests
     }
 
     /// <summary>
+    /// M3 gathering scenario: spawn a Town Hall, a tree cluster, two villagers, and issue a
+    /// gather command. Two replays of the full gather/deposit/return cycle must hash-match.
+    /// Catches non-determinism in resource state, carry transfer, drop-off selection, and the
+    /// "find another same-kind resource" search.
+    /// </summary>
+    [Fact]
+    public void GatheringScenario_ReplayedTwice_ProduceIdenticalHashes()
+    {
+        const ulong seed = 0xF00DBABEUL;
+        const int ticks = 2000;
+
+        var hashesA = RunGatherScenario(seed, ticks);
+        var hashesB = RunGatherScenario(seed, ticks);
+        Assert.Equal(hashesA, hashesB);
+
+        // Sanity: a non-trivial amount of wood ended up in P1's stockpile.
+        var verify = new World(seed);
+        SetupGatherScenario(verify, out var villager, out var tcId, out var treeIds);
+        var gather = new GatherCommand
+        {
+            ExecuteAtTick = 0, Player = PlayerId.Player1, Sequence = 1,
+            Gatherers = new[] { villager.Id },
+            ResourceNode = treeIds[0],
+        };
+        var empty = new List<Command>();
+        for (int t = 0; t < ticks; t++) verify.Step(t == 0 ? new List<Command> { gather } : empty);
+        Assert.True(verify.GetPlayer(PlayerId.Player1).Wood.ToInt() > 0,
+            "Expected the villager to have deposited wood at least once over 2000 ticks.");
+    }
+
+    /// <summary>
     /// Re-pathing determinism: a unit walks across the map, and at a fixed tick a wall is
     /// dropped onto its current path. The unit must re-path; two replays must produce the
     /// same path choice and the same resulting hashes. Wall placement uses SetTerrain
@@ -173,6 +205,44 @@ public class DeterminismTests
         }
 
         return hashes;
+    }
+
+    private static List<ulong> RunGatherScenario(ulong seed, int ticks)
+    {
+        var world = new World(seed);
+        SetupGatherScenario(world, out var villager, out var tcId, out var treeIds);
+        var gather = new GatherCommand
+        {
+            ExecuteAtTick = 0, Player = PlayerId.Player1, Sequence = 1,
+            Gatherers = new[] { villager.Id },
+            ResourceNode = treeIds[0],
+        };
+
+        var hashes = new List<ulong>(ticks + 1) { world.ComputeStateHash() };
+        var initial = new List<Command> { gather };
+        var empty = new List<Command>();
+        for (int t = 0; t < ticks; t++)
+        {
+            world.Step(t == 0 ? initial : empty);
+            hashes.Add(world.ComputeStateHash());
+        }
+        return hashes;
+    }
+
+    private static void SetupGatherScenario(World world, out Unit villager, out EntityId tcId, out List<EntityId> treeIds)
+    {
+        // Flat arena around the working area.
+        for (int y = 10; y < 30; y++)
+            for (int x = 10; x < 30; x++)
+                world.Map.SetTerrain(x, y, Terrain.Plain);
+
+        world.GetPlayer(PlayerId.Player1).Wood = Fixed64.Zero;
+        var tc = world.CreateBuilding(BuildingTypeId.TownHall, PlayerId.Player1, tileX: 15, tileY: 15, footprintW: 3, footprintH: 3, hpMax: 600);
+        tcId = tc.Id;
+        treeIds = new List<EntityId>();
+        for (int i = 0; i < 3; i++)
+            treeIds.Add(world.CreateTree(20 + i, 20).Id);
+        villager = world.CreateUnit(PlayerId.Player1, FixedVector2.FromInts(18, 18));
     }
 
     private static List<ulong> RunCorridorScenario(ulong seed, int ticks)
