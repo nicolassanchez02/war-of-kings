@@ -18,23 +18,34 @@ Pre-alpha. Setting up architecture and tooling. No gameplay yet.
 
 ## Quick start
 
-```bash
-# Build everything and run all tests
+```powershell
+# Build everything and run all tests (sim only — Godot is a separate project)
 dotnet test WarOfKings.sln
 
 # Run the deterministic simulation headlessly (proves the sim works)
 dotnet run --project src/App/Headless
 
-# Convenience wrappers
-bash   scripts/run-headless.sh                  # Linux/macOS/git-bash
-pwsh   scripts/run-headless.ps1                 # Windows PowerShell
-
 # Replay with the same seed twice and confirm hashes match
 dotnet run --project src/App/Headless -- --twice --ticks 1000 --every 100
+
+# Play the game (Godot 4.6.2 Mono required, see below)
+pwsh scripts/play.ps1
+
+# Open the project in the Godot editor
+pwsh scripts/edit-godot.ps1
 ```
 
-The Godot editor is not required to build, test, or run the headless simulation.
-It will be wired in during M2 (rendering) per `docs/SCOPE.md`.
+Cross-platform wrappers exist for the headless runner: `scripts/run-headless.{sh,ps1}`.
+
+### Godot setup (one-time)
+
+The renderer requires the **Mono / .NET** build of Godot 4.6.2 — the plain build will not load the C# scripts. Install one of:
+
+```powershell
+winget install --id GodotEngine.GodotEngine.Mono
+```
+
+…or grab `Godot_v4.6.2-stable_mono_win64.exe` from https://godotengine.org/download/windows/ and update the path inside `scripts/play.ps1` and `scripts/edit-godot.ps1`.
 
 
 

@@ -27,7 +27,7 @@ Each milestone has a definition of done. Don't move to the next one until the cu
 **Goal:** A repo that builds, runs an empty Godot scene, and has the simulation library compiling separately.
 
 Definition of done:
-- [ ] Godot project opens cleanly
+- [x] Godot project opens cleanly (Godot 4.6.2 Mono; `pwsh scripts/play.ps1` runs the scene; `pwsh scripts/edit-godot.ps1` opens the editor)
 - [x] `Simulation.csproj` builds standalone (no Godot reference)
 - [x] Solution builds end to end
 - [x] CI runs on push and goes green
