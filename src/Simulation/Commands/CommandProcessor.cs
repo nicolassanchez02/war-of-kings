@@ -50,9 +50,63 @@ public static class CommandProcessor
             switch (command)
             {
                 case MoveCommand mc: ApplyMoveCommand(world, mc); break;
-                // Attack/Gather/Build/Train arrive in M3+.
+                case GatherCommand gc: ApplyGatherCommand(world, gc); break;
+                // Attack/Build/Train arrive in M4+.
             }
         }
+    }
+
+    private static void ApplyGatherCommand(World world, GatherCommand gc)
+    {
+        // Validate target resource exists and is alive.
+        if (!world.TryGetEntity(gc.ResourceNode, out var resObj)) return;
+        int resX, resY;
+        switch (resObj)
+        {
+            case Entities.Tree t when !t.IsDepleted: resX = t.TileX; resY = t.TileY; break;
+            case Entities.BerryBush b when !b.IsDepleted: resX = b.TileX; resY = b.TileY; break;
+            default: return;
+        }
+
+        // Find an adjacent passable tile (the AdjacentTileTo helper in GatheringSystem is
+        // private to that file; we duplicate the lightweight version here to keep dependencies
+        // one-directional).
+        int? adj = FirstPassableAdjacent(world, resX, resY);
+        if (adj is not int adjIdx) return;
+
+        var ordered = new List<EntityId>(gc.Gatherers);
+        ordered.Sort();
+        foreach (var unitId in ordered)
+        {
+            if (!world.TryGetEntity(unitId, out var entity) || entity is not Entities.Unit u) continue;
+            if (u.Owner != gc.Player) continue;
+            u.TargetEntityId = gc.ResourceNode;
+            u.Behavior = Entities.BehaviorKind.GoingToResource;
+            u.PendingDestinationIdx = adjIdx;
+            u.ClearPath();
+            u.WaitTicks = 0;
+            u.RepathsInWindow = 0;
+            u.RepathWindowStartTick = world.CurrentTick;
+            u.State = Entities.UnitState.Moving;
+        }
+    }
+
+    private static int? FirstPassableAdjacent(World world, int cx, int cy)
+    {
+        var offsets = new (int dx, int dy)[] {
+            (1,0),(-1,0),(0,1),(0,-1),
+            (1,1),(-1,1),(-1,-1),(1,-1),
+        };
+        foreach (var (dx, dy) in offsets)
+        {
+            int nx = cx + dx, ny = cy + dy;
+            if ((uint)nx >= Grid.Width || (uint)ny >= Grid.Height) continue;
+            if (!world.Map.IsPassable(nx, ny)) continue;
+            int idx = ny * Grid.Width + nx;
+            if (!world.GetOccupant(idx).IsNone) continue;
+            return idx;
+        }
+        return null;
     }
 
     private static int Compare(Command a, Command b)

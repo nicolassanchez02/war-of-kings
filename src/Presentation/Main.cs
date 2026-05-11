@@ -240,7 +240,7 @@ public partial class Main : Node2D
 
         if (mb.ButtonIndex == MouseButton.Right && mb.Pressed)
         {
-            IssueMoveCommand(mb.Position);
+            IssueRightClick(mb.Position);
         }
     }
 
@@ -281,7 +281,7 @@ public partial class Main : Node2D
         }
     }
 
-    private void IssueMoveCommand(Vector2 screen)
+    private void IssueRightClick(Vector2 screen)
     {
         if (_selectedUnitIds.Count == 0) return;
         var worldPx = ScreenToWorldPx(screen);
@@ -292,6 +292,26 @@ public partial class Main : Node2D
         var ids = new List<EntityId>();
         foreach (var id in _selectedUnitIds) ids.Add(new EntityId(id));
         ids.Sort();
+
+        // What's at the clicked tile? If it's a Tree/BerryBush owned by no-one, issue a
+        // GatherCommand. Otherwise, default to MoveCommand.
+        int clickedIdx = ty * Grid.Width + tx;
+        var occupant = _world.GetOccupant(clickedIdx);
+        if (!occupant.IsNone && _world.TryGetEntity(occupant, out var obj))
+        {
+            if (obj is WarOfKings.Simulation.Entities.Tree || obj is BerryBush)
+            {
+                _pendingCommands.Add(new GatherCommand
+                {
+                    ExecuteAtTick = _world.CurrentTick,
+                    Player = PlayerId.Player1,
+                    Sequence = _nextSequenceP1++,
+                    Gatherers = ids.ToArray(),
+                    ResourceNode = occupant,
+                });
+                return;
+            }
+        }
 
         _pendingCommands.Add(new MoveCommand
         {

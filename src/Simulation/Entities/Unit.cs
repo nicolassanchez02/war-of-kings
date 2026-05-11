@@ -4,12 +4,34 @@ using WarOfKings.Simulation.Pathfinding;
 
 namespace WarOfKings.Simulation.Entities;
 
-/// <summary>High-level FSM state for a unit. M1 covers Idle/Moving/Waiting only.</summary>
+/// <summary>Low-level movement status. Orthogonal to <see cref="BehaviorKind"/>.</summary>
 public enum UnitState : byte
 {
     Idle = 0,
     Moving = 1,
     Waiting = 2,    // next tile blocked; counting toward repath threshold
+}
+
+/// <summary>
+/// High-level intent layered on top of the movement state. M3 introduces the gathering loop;
+/// later milestones extend with construction, combat, and fleeing.
+/// </summary>
+public enum BehaviorKind : byte
+{
+    Generic = 0,            // no behavior layer — direct move commands only
+    GoingToResource = 1,    // moving toward TargetEntityId (a Tree/BerryBush)
+    Gathering = 2,          // adjacent to TargetEntityId, ticking gather progress
+    GoingToDropOff = 3,     // carry full / resource depleted, heading to DropOffId
+    Depositing = 4,         // at DropOffId, single-tick transfer to player stockpile
+}
+
+/// <summary>What kind of carry a villager currently holds.</summary>
+public enum CarryKind : byte
+{
+    None = 0,
+    Wood = 1,
+    Food = 2,
+    Gold = 3,
 }
 
 /// <summary>
@@ -58,6 +80,23 @@ public sealed class Unit : IHashable
     public int RepathsInWindow { get; set; }
     public long RepathWindowStartTick { get; set; }
 
+    // --- Behavior layer (M3 gathering) ---
+
+    public BehaviorKind Behavior { get; set; } = BehaviorKind.Generic;
+
+    /// <summary>Resource/build-site/attack target. EntityId.None when no behavior target is set.</summary>
+    public EntityId TargetEntityId { get; set; } = EntityId.None;
+
+    /// <summary>Active drop-off building during the carry phase. EntityId.None otherwise.</summary>
+    public EntityId DropOffId { get; set; } = EntityId.None;
+
+    public CarryKind Carried { get; set; } = CarryKind.None;
+    public Fixed64 CarryAmount { get; set; }
+    public Fixed64 CarryCapacity { get; set; } = Fixed64.FromInt(10);
+
+    /// <summary>Tick counter for the gathering tempo. 20 ticks (= 1s at 20Hz) yields +1 carry.</summary>
+    public int GatherProgressTicks { get; set; }
+
     public Unit(EntityId id)
     {
         Id = id;
@@ -90,5 +129,12 @@ public sealed class Unit : IHashable
         hash.Mix((long)WaitTicks);
         hash.Mix((long)RepathsInWindow);
         hash.Mix(RepathWindowStartTick);
+        hash.MixByte((byte)Behavior);
+        hash.Mix(TargetEntityId.Value);
+        hash.Mix(DropOffId.Value);
+        hash.MixByte((byte)Carried);
+        hash.Mix(CarryAmount.Raw);
+        hash.Mix(CarryCapacity.Raw);
+        hash.Mix((long)GatherProgressTicks);
     }
 }

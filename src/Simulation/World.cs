@@ -36,6 +36,7 @@ public sealed class World
     // tile; A* and MovementSystem treat any non-None entry as a blocker.
     private readonly EntityId[] _occupancy;
 
+    private readonly GatheringSystem _gathering = new();
     private readonly MovementSystem _movement = new();
 
     public World(ulong seed)
@@ -198,6 +199,10 @@ public sealed class World
     public void Step(IReadOnlyList<Command> commandsForThisTick)
     {
         CommandProcessor.Apply(this, commandsForThisTick);
+        // Order: behavior decisions first (they may set new pending paths or clear paths),
+        // then low-level movement. Reversing this order means MovementSystem consumes a path
+        // before BehaviorSystem decides to abandon it.
+        _gathering.Tick(this);
         _movement.Tick(this);
         CurrentTick++;
     }
