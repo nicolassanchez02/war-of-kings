@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using WarOfKings.Simulation;
 using WarOfKings.Simulation.Commands;
 using WarOfKings.Simulation.Core;
+using WarOfKings.Simulation.Pathfinding;
 using Xunit;
 
 namespace WarOfKings.Determinism.Tests;
@@ -31,14 +32,107 @@ public class DeterminismTests
         Assert.Equal(hashesA, hashesB);
     }
 
-    // TODO(Claude Code, M1): once entities and movement exist, add:
-    // [Fact] public void RandomMoveCommands_ReplayedTwice_ProduceIdenticalHashes()
+    // M1 determinism test, written ahead of the movement system per the brief's
+    // "test first" discipline. Skipped while the system is incomplete; CI stays
+    // green during M1 work. Remove the Skip attribute as the last commit of M1
+    // — that commit is the milestone gate.
     //
-    // TODO(Claude Code, M3): once gathering works, add:
-    // [Fact] public void GatheringScenario_ReplayedTwice_ProduceIdenticalHashes()
-    //
-    // TODO(Claude Code, M4): once combat works, add:
-    // [Fact] public void CombatScenario_ReplayedTwice_ProduceIdenticalHashes()
+    // The test asserts two things:
+    //   1. Two replays of the same seeded random-input log produce identical
+    //      hash sequences (the canonical determinism contract).
+    //   2. The hash sequence is non-trivial — hashes diverge over time as units
+    //      actually move. Without this, the test passes vacuously even when no
+    //      command is processed.
+    [Fact(Skip = "Activate when MoveCommand processing + movement system land in M1.")]
+    public void RandomMoveCommands_ReplayedTwice_ProduceIdenticalHashes()
+    {
+        const ulong seed = 0xD15EA5EDUL;
+        const int ticks = 1000;
+        const int numUnits = 4;
+
+        var hashesA = RunRandomScenario(seed, ticks, numUnits);
+        var hashesB = RunRandomScenario(seed, ticks, numUnits);
+
+        Assert.Equal(hashesA, hashesB);
+
+        // Sanity: the world actually progressed. If commands aren't being
+        // applied, every tick's hash will differ only by CurrentTick mixing.
+        // That mixing alone changes the hash — so the right sanity is that
+        // unit positions changed. We check unit hashes by re-running and
+        // capturing position state via the public unit accessor.
+        var world = new World(seed);
+        SpawnPattern(world, numUnits);
+        var initialPositions = SnapshotPositions(world);
+        StepWithRandomCommands(world, seed, ticks, numUnits);
+        var finalPositions = SnapshotPositions(world);
+        Assert.NotEqual(initialPositions, finalPositions);
+    }
+
+    private static List<ulong> RunRandomScenario(ulong seed, int ticks, int numUnits)
+    {
+        var world = new World(seed);
+        SpawnPattern(world, numUnits);
+        return StepWithRandomCommands(world, seed, ticks, numUnits);
+    }
+
+    private static void SpawnPattern(World world, int numUnits)
+    {
+        for (int i = 0; i < numUnits; i++)
+        {
+            var owner = (i % 2 == 0) ? PlayerId.Player1 : PlayerId.Player2;
+            world.CreateUnit(owner, FixedVector2.FromInts(20 + i * 3, 20 + i * 3));
+        }
+    }
+
+    private static List<ulong> StepWithRandomCommands(World world, ulong seed, int ticks, int numUnits)
+    {
+        // Dedicated RNG so the command stream is independent of the world's own draws.
+        var inputRng = new DeterministicRng(seed ^ 0xC0FFEEC0FFEEUL);
+        var hashes = new List<ulong>(ticks + 1) { world.ComputeStateHash() };
+
+        for (int t = 0; t < ticks; t++)
+        {
+            var commands = new List<Command>();
+
+            // Emit a MoveCommand every 25 ticks, targeting a random passable tile.
+            if (t % 25 == 0)
+            {
+                for (long id = 1; id <= numUnits; id++)
+                {
+                    int tx, ty;
+                    do
+                    {
+                        tx = inputRng.NextIntRange(0, Grid.Width);
+                        ty = inputRng.NextIntRange(0, Grid.Height);
+                    } while (!world.Map.IsPassable(tx, ty));
+
+                    commands.Add(new MoveCommand
+                    {
+                        ExecuteAtTick = t,
+                        Player = (id % 2 == 1) ? PlayerId.Player1 : PlayerId.Player2,
+                        Sequence = (uint)((t * 7919) + id),
+                        Units = new[] { new EntityId(id) },
+                        Target = FixedVector2.FromInts(tx, ty),
+                    });
+                }
+            }
+
+            world.Step(commands);
+            hashes.Add(world.ComputeStateHash());
+        }
+
+        return hashes;
+    }
+
+    private static List<FixedVector2> SnapshotPositions(World world)
+    {
+        var positions = new List<FixedVector2>();
+        foreach (var u in world.UnitsOrderedById()) positions.Add(u.Position);
+        return positions;
+    }
+
+    // TODO(M3): GatheringScenario_ReplayedTwice_ProduceIdenticalHashes
+    // TODO(M4): CombatScenario_ReplayedTwice_ProduceIdenticalHashes
 
     private static List<ulong> RunWorld(ulong seed, int ticks, IReadOnlyList<Command> commands)
     {
