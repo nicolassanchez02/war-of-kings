@@ -14,7 +14,7 @@ public enum UnitState : byte
 
 /// <summary>
 /// High-level intent layered on top of the movement state. M3 introduces the gathering loop;
-/// later milestones extend with construction, combat, and fleeing.
+/// M4 extends with combat (pursuit + attack); later milestones add building and fleeing.
 /// </summary>
 public enum BehaviorKind : byte
 {
@@ -23,6 +23,8 @@ public enum BehaviorKind : byte
     Gathering = 2,          // adjacent to TargetEntityId, ticking gather progress
     GoingToDropOff = 3,     // carry full / resource depleted, heading to DropOffId
     Depositing = 4,         // at DropOffId, single-tick transfer to player stockpile
+    Pursuing = 5,           // moving toward TargetEntityId (enemy unit/building)
+    Attacking = 6,          // in range, ticking attack cooldown against TargetEntityId
 }
 
 /// <summary>What kind of carry a villager currently holds.</summary>
@@ -97,6 +99,15 @@ public sealed class Unit : IHashable
     /// <summary>Tick counter for the gathering tempo. 20 ticks (= 1s at 20Hz) yields +1 carry.</summary>
     public int GatherProgressTicks { get; set; }
 
+    // --- Combat ---
+
+    /// <summary>1 = villager (default), 2 = militia.</summary>
+    public int UnitTypeId { get; set; } = 1;
+
+    /// <summary>Ticks since last attack swing landed; resets on swing. Set to AttackCooldown - 1
+    /// when AttackCommand fires so the first swing connects after a single-tick wind-up.</summary>
+    public int AttackCooldownTicks { get; set; }
+
     public Unit(EntityId id)
     {
         Id = id;
@@ -136,5 +147,7 @@ public sealed class Unit : IHashable
         hash.Mix(CarryAmount.Raw);
         hash.Mix(CarryCapacity.Raw);
         hash.Mix((long)GatherProgressTicks);
+        hash.Mix((long)UnitTypeId);
+        hash.Mix((long)AttackCooldownTicks);
     }
 }
