@@ -1,0 +1,26 @@
+<Project Sdk="Godot.NET.Sdk/4.6.2">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>WarOfKings.Game</RootNamespace>
+    <AssemblyName>WarOfKings.Game</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <!-- Godot.NET.Sdk globs every *.cs from the project root by default. Restrict to
+       the renderer-side code under src/Presentation; sim, tests, and the headless app
+       are owned by their own .csproj files and must not be double-compiled here. -->
+  <ItemGroup>
+    <Compile Remove="src\Simulation\**\*.cs" />
+    <Compile Remove="src\App\**\*.cs" />
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The simulation is its own project. The Godot side only consumes it. -->
+    <ProjectReference Include="src\Simulation\Simulation.csproj" />
+  </ItemGroup>
+
+</Project>
