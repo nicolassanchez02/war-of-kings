@@ -201,7 +201,10 @@ public partial class Main : Node2D
                 _showDebugPanel = !_showDebugPanel;
                 break;
             case InputEventKey { Pressed: true, Keycode: Key.V }:
-                IssueTrainVillager();
+                IssueTrainUnit(unitTypeId: 1);
+                break;
+            case InputEventKey { Pressed: true, Keycode: Key.M }:
+                IssueTrainUnit(unitTypeId: 2);
                 break;
             case InputEventMouseButton mb:
                 HandleMouseButton(mb);
@@ -284,9 +287,11 @@ public partial class Main : Node2D
         }
     }
 
-    private void IssueTrainVillager()
+    private void IssueTrainUnit(int unitTypeId)
     {
-        // Find Player 1's first (lowest-ID) Town Hall and queue a villager there.
+        // Find Player 1's first (lowest-ID) Town Hall and queue the requested unit there.
+        // (M3 simplification: both villagers and militia train at TC. Barracks training
+        // is a later milestone — see Q-15.)
         Building? tc = null;
         foreach (var b in _world.BuildingsOrderedById())
         {
@@ -304,7 +309,7 @@ public partial class Main : Node2D
             Player = PlayerId.Player1,
             Sequence = _nextSequenceP1++,
             ProductionBuilding = tc.Id,
-            UnitTypeId = 1, // villager
+            UnitTypeId = unitTypeId,
         });
     }
 
@@ -320,8 +325,10 @@ public partial class Main : Node2D
         foreach (var id in _selectedUnitIds) ids.Add(new EntityId(id));
         ids.Sort();
 
-        // What's at the clicked tile? If it's a Tree/BerryBush owned by no-one, issue a
-        // GatherCommand. Otherwise, default to MoveCommand.
+        // Dispatch by what's at the clicked tile:
+        //   resource  -> GatherCommand
+        //   enemy     -> AttackCommand
+        //   empty/own -> MoveCommand
         int clickedIdx = ty * Grid.Width + tx;
         var occupant = _world.GetOccupant(clickedIdx);
         if (!occupant.IsNone && _world.TryGetEntity(occupant, out var obj))
@@ -335,6 +342,30 @@ public partial class Main : Node2D
                     Sequence = _nextSequenceP1++,
                     Gatherers = ids.ToArray(),
                     ResourceNode = occupant,
+                });
+                return;
+            }
+            if (obj is Unit eu && eu.Owner != PlayerId.Player1)
+            {
+                _pendingCommands.Add(new AttackCommand
+                {
+                    ExecuteAtTick = _world.CurrentTick,
+                    Player = PlayerId.Player1,
+                    Sequence = _nextSequenceP1++,
+                    Attackers = ids.ToArray(),
+                    Target = occupant,
+                });
+                return;
+            }
+            if (obj is Building eb && eb.Owner != PlayerId.Player1)
+            {
+                _pendingCommands.Add(new AttackCommand
+                {
+                    ExecuteAtTick = _world.CurrentTick,
+                    Player = PlayerId.Player1,
+                    Sequence = _nextSequenceP1++,
+                    Attackers = ids.ToArray(),
+                    Target = occupant,
                 });
                 return;
             }
@@ -360,6 +391,35 @@ public partial class Main : Node2D
         DrawSelectionBox();
         DrawUnits();
         DrawHud();
+        DrawEndgameBanner();
+    }
+
+    private void DrawEndgameBanner()
+    {
+        // Win/loss check: each player's victory condition is the survival of at least one
+        // Town Hall. The check is renderer-only (the sim itself doesn't yet have a "match
+        // over" concept); displayed for visual feedback while the rest of M4 falls into place.
+        bool p1HasTc = false, p2HasTc = false;
+        foreach (var b in _world.BuildingsOrderedById())
+        {
+            if (b.Type != BuildingTypeId.TownHall) continue;
+            if (b.IsDestroyed) continue;
+            if (b.Owner == PlayerId.Player1) p1HasTc = true;
+            else if (b.Owner == PlayerId.Player2) p2HasTc = true;
+        }
+        if (p1HasTc && p2HasTc) return;
+
+        var font = ThemeDB.FallbackFont;
+        var vp = GetViewportRect().Size;
+        var bannerRect = new Rect2(vp.X / 2 - 250, vp.Y / 2 - 60, 500, 120);
+        DrawRect(bannerRect, new Color(0, 0, 0, 0.8f));
+        DrawRect(bannerRect, new Color(1, 1, 0.7f, 0.9f), filled: false, width: 3f);
+
+        string title = !p2HasTc ? "VICTORY" : "DEFEAT";
+        string subtitle = !p2HasTc ? "The enemy Town Center has fallen." : "Your Town Center has been destroyed.";
+        var titleColor = !p2HasTc ? new Color(1f, 1f, 0.7f) : new Color(1f, 0.5f, 0.5f);
+        DrawString(font, new Vector2(vp.X / 2 - 80, vp.Y / 2 - 10), title, HorizontalAlignment.Left, -1, 36, titleColor);
+        DrawString(font, new Vector2(vp.X / 2 - 200, vp.Y / 2 + 30), subtitle, HorizontalAlignment.Left, -1, 16, new Color(0.85f, 0.85f, 0.85f));
     }
 
     private void DrawBuildings()
@@ -476,12 +536,23 @@ public partial class Main : Node2D
 
             if (_selectedUnitIds.Contains(u.Id.Value))
             {
-                // Selection ring beneath the unit.
                 DrawArc(screen, radius + 4, 0, Mathf.Tau, 36, new Color(1f, 1f, 0.6f, 0.85f), 2.5f, true);
             }
 
-            DrawCircle(screen, radius, color);
-            DrawArc(screen, radius, 0, Mathf.Tau, 32, new Color(0, 0, 0, 0.6f), 1.5f, true);
+            if (u.UnitTypeId == 2)
+            {
+                // Militia: filled square.
+                var sz = radius * 1.5f;
+                var rect = new Rect2(screen.X - sz / 2, screen.Y - sz / 2, sz, sz);
+                DrawRect(rect, color, filled: true);
+                DrawRect(rect, new Color(0, 0, 0, 0.7f), filled: false, width: 1.5f);
+            }
+            else
+            {
+                // Villager (and any unknown type): filled circle.
+                DrawCircle(screen, radius, color);
+                DrawArc(screen, radius, 0, Mathf.Tau, 32, new Color(0, 0, 0, 0.6f), 1.5f, true);
+            }
 
             // HP bar above unit (always-on for now; M5 will dim when full).
             if (u.HpCurrent < u.HpMax)
@@ -523,7 +594,7 @@ public partial class Main : Node2D
         var topBar = $"tick {_world.CurrentTick}    hash 0x{_world.ComputeStateHash():X16}    FPS {Engine.GetFramesPerSecond():0}    zoom {CurrentZoom:0.00}x";
         DrawString(font, new Vector2(16, 28), topBar, HorizontalAlignment.Left, -1, 16, new Color(0.95f, 0.95f, 0.95f));
 
-        var hints = "WASD pan | wheel zoom | LMB select / drag-box | RMB move/gather | V train villager | F3 debug | F8 sprites toggle";
+        var hints = "WASD pan | wheel zoom | LMB select | RMB move/gather/attack | V train villager | M train militia | F3 debug | F8 sprites";
         DrawString(font, new Vector2(16, 52), hints, HorizontalAlignment.Left, -1, 13, new Color(0.7f, 0.7f, 0.7f));
 
         var selText = $"selected: {_selectedUnitIds.Count}";

@@ -53,8 +53,38 @@ public static class CommandProcessor
                 case MoveCommand mc: ApplyMoveCommand(world, mc); break;
                 case GatherCommand gc: ApplyGatherCommand(world, gc); break;
                 case TrainCommand tc: ApplyTrainCommand(world, tc); break;
-                // Attack/Build arrive in M4.
+                case AttackCommand ac: ApplyAttackCommand(world, ac); break;
+                // Build arrives in a later milestone.
             }
+        }
+    }
+
+    private static void ApplyAttackCommand(World world, AttackCommand ac)
+    {
+        // Validate target exists.
+        if (!world.TryGetEntity(ac.Target, out var targetObj)) return;
+        switch (targetObj)
+        {
+            case Entities.Unit ut when ut.HpCurrent.Raw > 0:
+            case Entities.Building bt when !bt.IsDestroyed:
+                break;
+            default:
+                return;
+        }
+
+        var orderedAttackers = new List<EntityId>(ac.Attackers);
+        orderedAttackers.Sort();
+        foreach (var unitId in orderedAttackers)
+        {
+            if (!world.TryGetEntity(unitId, out var entity) || entity is not Entities.Unit u) continue;
+            if (u.Owner != ac.Player) continue;
+            u.TargetEntityId = ac.Target;
+            u.Behavior = Entities.BehaviorKind.Pursuing;
+            u.PendingDestinationIdx = -1; // CombatSystem will set the approach tile this tick
+            u.AttackCooldownTicks = System.Math.Max(0, Systems.UnitStats.AttackCooldownTicks(u.UnitTypeId) - 1);
+            u.WaitTicks = 0;
+            u.RepathsInWindow = 0;
+            u.RepathWindowStartTick = world.CurrentTick;
         }
     }
 

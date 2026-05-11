@@ -37,6 +37,7 @@ public sealed class World
     private readonly EntityId[] _occupancy;
 
     private readonly GatheringSystem _gathering = new();
+    private readonly CombatSystem _combat = new();
     private readonly MovementSystem _movement = new();
     private readonly ProductionSystem _production = new();
 
@@ -74,6 +75,35 @@ public sealed class World
         if (_entities.TryGetValue(id, out var e)) { entity = e; return true; }
         entity = null;
         return false;
+    }
+
+    /// <summary>
+    /// Remove an entity from the world. Clears all occupied tiles, decrements the owner's
+    /// PopCurrent (for Units), and drops the entity from active iteration. The EntityId is
+    /// burned — never re-used. Idempotent: removing an already-removed entity is a no-op.
+    /// </summary>
+    public void RemoveEntity(EntityId id)
+    {
+        if (!_entities.TryGetValue(id, out var obj)) return;
+        switch (obj)
+        {
+            case Unit u:
+                ClearOccupant(u.CurrentTileIdx, u.Id);
+                GetPlayer(u.Owner).PopCurrent = System.Math.Max(0, GetPlayer(u.Owner).PopCurrent - 1);
+                break;
+            case Tree t:
+                ClearOccupant(t.TileY * Grid.Width + t.TileX, t.Id);
+                break;
+            case BerryBush bb:
+                ClearOccupant(bb.TileY * Grid.Width + bb.TileX, bb.Id);
+                break;
+            case Building b:
+                for (int dy = 0; dy < b.FootprintH; dy++)
+                    for (int dx = 0; dx < b.FootprintW; dx++)
+                        ClearOccupant((b.TileY + dy) * Grid.Width + (b.TileX + dx), b.Id);
+                break;
+        }
+        _entities.Remove(id);
     }
 
     public IEnumerable<KeyValuePair<EntityId, object>> EntitiesOrderedById() => _entities;
@@ -208,6 +238,7 @@ public sealed class World
         // to MovementSystem on tick zero of their life, with no path or behavior — fine, but
         // we keep production last so newborns get a full tick of state before they move.
         _gathering.Tick(this);
+        _combat.Tick(this);
         _movement.Tick(this);
         _production.Tick(this);
         CurrentTick++;

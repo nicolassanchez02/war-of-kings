@@ -124,6 +124,49 @@ public class DeterminismTests
     }
 
     /// <summary>
+    /// M4 combat scenario: two militia, mutual AttackCommands. Two replays of the entire
+    /// fight (pursuit + attacks + at least one death) must produce identical hash sequences.
+    /// </summary>
+    [Fact]
+    public void CombatScenario_ReplayedTwice_ProduceIdenticalHashes()
+    {
+        const ulong seed = 0xC0FFEEFACEUL;
+        const int ticks = 500;
+
+        var hashesA = RunCombatScenario(seed, ticks);
+        var hashesB = RunCombatScenario(seed, ticks);
+        Assert.Equal(hashesA, hashesB);
+    }
+
+    private static List<ulong> RunCombatScenario(ulong seed, int ticks)
+    {
+        var world = new World(seed);
+        for (int y = 10; y < 30; y++)
+            for (int x = 10; x < 30; x++)
+                world.Map.SetTerrain(x, y, Terrain.Plain);
+
+        var a = world.CreateUnit(PlayerId.Player1, FixedVector2.FromInts(15, 15));
+        a.UnitTypeId = 2; a.HpCurrent = Fixed64.FromInt(40); a.HpMax = Fixed64.FromInt(40);
+        var b = world.CreateUnit(PlayerId.Player2, FixedVector2.FromInts(20, 15));
+        b.UnitTypeId = 2; b.HpCurrent = Fixed64.FromInt(40); b.HpMax = Fixed64.FromInt(40);
+
+        var commands = new List<Command>
+        {
+            new AttackCommand { ExecuteAtTick = 0, Player = PlayerId.Player1, Sequence = 1, Attackers = new[] { a.Id }, Target = b.Id },
+            new AttackCommand { ExecuteAtTick = 0, Player = PlayerId.Player2, Sequence = 1, Attackers = new[] { b.Id }, Target = a.Id },
+        };
+
+        var hashes = new List<ulong>(ticks + 1) { world.ComputeStateHash() };
+        var empty = new List<Command>();
+        for (int t = 0; t < ticks; t++)
+        {
+            world.Step(t == 0 ? commands : empty);
+            hashes.Add(world.ComputeStateHash());
+        }
+        return hashes;
+    }
+
+    /// <summary>
     /// Re-pathing determinism: a unit walks across the map, and at a fixed tick a wall is
     /// dropped onto its current path. The unit must re-path; two replays must produce the
     /// same path choice and the same resulting hashes. Wall placement uses SetTerrain

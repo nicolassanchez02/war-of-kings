@@ -63,11 +63,14 @@ public sealed class ProductionSystem
 
     private static void ApplyUnitTypeStats(Unit u, int unitTypeId)
     {
+        u.UnitTypeId = unitTypeId;
         switch (unitTypeId)
         {
-            case 1: // Villager — already the default Unit defaults; nothing extra to set in M3.
+            case 1: // Villager
+                u.HpCurrent = Fixed64.FromInt(25);
+                u.HpMax = Fixed64.FromInt(25);
                 break;
-            case 2: // Militia (M4 placeholder).
+            case 2: // Militia
                 u.HpCurrent = Fixed64.FromInt(40);
                 u.HpMax = Fixed64.FromInt(40);
                 break;
