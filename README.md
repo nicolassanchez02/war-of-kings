@@ -6,7 +6,7 @@ This is a focused project. The goal is to ship a polished 1v1 skirmish RTS, not 
 
 ## Status
 
-Pre-alpha. Setting up architecture and tooling. No gameplay yet.
+M0 complete. M1-M9 in flight on `overnight/2026-05-11-mechanical-complete` (see PR for details). Awaiting morning review.
 
 ## Stack
 
