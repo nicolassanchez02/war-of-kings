@@ -154,6 +154,39 @@ Start simple, evolve as needed.
 
 Don't write Phase 3 before Phase 1 works. Don't write Phase 2 before benchmarks show A* is the bottleneck.
 
+### Phase 1 details (as of M1)
+
+Per `src/Simulation/Pathfinding/AStar.cs`:
+- 8-connected grid, integer costs (10 orthogonal, 14 diagonal), octile heuristic.
+- No corner-cutting: a diagonal step requires both flanking cardinal tiles to be passable.
+- Tie-breaker on the open set: lower f-score, then lower h-score, then lower node ID
+  (`y * Grid.Width + x`). The heap never breaks ties by insertion order or memory address —
+  both vary across runs and would silently desync replays. **Do not change this contract**
+  without also updating the determinism test fixtures.
+- Path is start-inclusive and goal-inclusive (`Path[0] == startTile`, `Path[^1] == goalTile`).
+- Optional string-pulling smoother lives behind `AStar.EnableSmoothing` and is off by default.
+  Enabling it changes resulting hashes; must stay off until validated against the
+  determinism suite.
+
+### Re-pathing behavior (as of M1)
+
+A unit's path can become invalid mid-walk — most commonly when another unit blocks the next
+waypoint (transient blocker) but also when terrain changes underneath it (a building gets
+constructed across the path). The MovementSystem handles both with the same machinery:
+
+1. **Wait.** When the next-step tile is occupied by another unit, the unit transitions to
+   `UnitState.Waiting` and increments `WaitTicks`. It does not move.
+2. **Re-path.** After 5 consecutive wait ticks, the unit emits a fresh path request from its
+   current tile to its existing destination. The block may have cleared by the time A* runs;
+   if not, A* will route around it.
+3. **Give up.** Re-paths are budgeted: at most 3 inside a rolling 100-tick window. The fourth
+   re-path within that window aborts the move entirely — the unit goes Idle with no
+   destination. This bound is what prevents pathological infinite re-pathing in dense
+   settings (a four-unit corridor jam, two villagers shuffling forever, etc.).
+
+A new `MoveCommand` from the input layer resets all of these counters: the user re-issuing a
+move is not the same as the engine auto-retrying.
+
 ## Entity model
 
 Entities use composition, not inheritance. A `Unit` has components:

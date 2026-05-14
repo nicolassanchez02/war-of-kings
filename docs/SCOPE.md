@@ -40,57 +40,57 @@ Definition of done:
 **Goal:** A world where units can move and the sim is provably deterministic.
 
 Definition of done:
-- [ ] Grid map, 200x200 tiles, each tile has a terrain type
-- [ ] Entity factory with monotonic IDs
-- [ ] One unit type (placeholder villager)
-- [ ] Move command works: click a tile, unit walks there
-- [ ] A* pathfinding on the grid, avoiding impassable tiles
-- [ ] Two units cannot occupy the same tile
-- [ ] **Determinism test:** record 1000 ticks of random input, replay twice, assert identical state hash. Test runs in CI.
+- [x] Grid map, 200x200 tiles, each tile has a terrain type
+- [x] Entity factory with monotonic IDs
+- [x] One unit type (placeholder villager)
+- [x] Move command works: click a tile, unit walks there
+- [x] A* pathfinding on the grid, avoiding impassable tiles
+- [x] Two units cannot occupy the same tile
+- [x] **Determinism test:** record 1000 ticks of random input, replay twice, assert identical state hash. Test runs in CI.
 
 ### M2: Rendering (week 5 to 6)
 
 **Goal:** You can see what's happening.
 
 Definition of done:
-- [ ] Camera with pan (WASD) and zoom (mouse wheel)
-- [ ] Terrain rendered from the grid
-- [ ] Unit sprite rendered at unit position, interpolated between ticks
-- [ ] Selection: click to select, drag-box to multi-select
-- [ ] Right-click issues move commands to all selected units
-- [ ] Selection highlight ring under selected units
-- [ ] Player color tinting on units
+- [x] Camera with pan (WASD) and zoom (mouse wheel)
+- [x] Terrain rendered from the grid
+- [~] Unit sprite rendered at unit position, interpolated between ticks (sprite is primitives-only this pass; interpolation deferred)
+- [x] Selection: click to select, drag-box to multi-select
+- [x] Right-click issues move commands to all selected units
+- [x] Selection highlight ring under selected units
+- [x] Player color tinting on units (primitives use blue/red; sprite tint shader deferred to Part 6)
 
 ### M3: Economy (week 7 to 9)
 
 **Goal:** The economy loop works and feels good. This is the most important milestone.
 
 Definition of done:
-- [ ] Trees, gold mines, berry bushes exist on the map
-- [ ] Villager gathers wood from trees (walk, chop, carry, deposit, repeat)
-- [ ] Villager gathers food from berries
-- [ ] Villager gathers gold from mines
-- [ ] Town Center, Lumber Camp, Mill, Mining Camp built and serve as drop-offs
-- [ ] Resources display in a HUD
-- [ ] Trees deplete and disappear
-- [ ] Villagers auto-target the nearest equivalent resource when one depletes
-- [ ] Build menu: select villager, click building icon, click placement, villager walks and builds
-- [ ] Houses raise population cap
-- [ ] Town Center trains villagers (queue, cost, time)
+- [x] Trees, ~~gold mines~~, berry bushes exist on the map (gold mines deferred per single-age scope)
+- [x] Villager gathers wood from trees (walk, chop, carry, deposit, repeat)
+- [x] Villager gathers food from berries
+- [ ] Villager gathers gold from mines _(out of single-age scope)_
+- [x] Town Center serves as drop-off _(Lumber Camp / Mill / Mining Camp not built; TC accepts all)_
+- [x] Resources display in a HUD
+- [x] Trees deplete and disappear (visual shrink at 75/50/25)
+- [x] Villagers auto-target the nearest equivalent resource when one depletes
+- [ ] Build menu: select villager, click building icon, click placement, villager walks and builds _(deferred)_
+- [ ] Houses raise population cap _(deferred — starting cap raised to 30)_
+- [x] Town Center trains villagers (queue, cost, time)
 
 ### M4: Combat (week 10 to 11)
 
 **Goal:** Things can fight.
 
 Definition of done:
-- [ ] Militia trains from Barracks
-- [ ] Two militia from different players will attack each other on sight
-- [ ] HP, damage, armor, attack speed all working from data tables
-- [ ] Attack-move command (right-click empty ground while holding A)
-- [ ] Stances (Aggressive, Defensive, Hold Ground)
-- [ ] Units die, leave a corpse for a few seconds, disappear
-- [ ] Buildings take damage and can be destroyed
-- [ ] Destroying the Town Center wins the game (placeholder win screen)
+- [~] Militia trains from ~~Barracks~~ Town Hall (Barracks deferred — Q-15)
+- [ ] Two militia from different players will attack each other on sight _(no auto-engage; explicit AttackCommand only)_
+- [x] HP, damage, armor, attack speed all working _(hardcoded in UnitStats; data-table loader deferred — Q-13)_
+- [ ] Attack-move command _(deferred)_
+- [ ] Stances _(deferred — assumes default Aggressive for everything)_
+- [~] Units die, ~~leave a corpse for a few seconds~~, disappear (no corpse fade)
+- [x] Buildings take damage and can be destroyed
+- [x] Destroying the Town Center wins the game (placeholder banner in renderer)
 
 ### M5: Full roster (week 12 to 14)
 
@@ -169,6 +169,10 @@ Definition of done:
 - [ ] Build pipeline for Windows, macOS, Linux
 - [ ] Itch.io page set up
 - [ ] Release
+
+## Post-launch wishlist
+
+Tracked in `docs/POSTLAUNCH.md`. Anything that doesn't belong in v1 but is worth not forgetting goes there.
 
 ## What gets added if v1 ships and people care
 
