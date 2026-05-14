@@ -50,3 +50,9 @@ secrets.env
 
 NOTES.md
 
+
+# Dev workflow (private)
+docs/
+scripts/
+.github/
+.editorconfig
