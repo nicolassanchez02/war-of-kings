@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using WarOfKings.Simulation.Core;
 using WarOfKings.Simulation.Entities;
 using WarOfKings.Simulation.Pathfinding;
@@ -16,9 +17,19 @@ namespace WarOfKings.Simulation.Systems;
 /// </summary>
 public sealed class ProductionSystem
 {
+    // Reusable snapshot buffer — avoids per-tick allocation in steady state.
+    private readonly List<Building> _buildingSnapshot = new();
+
     public void Tick(World world)
     {
+        // Snapshot the building list before iterating. World.CreateUnit adds a Unit to the
+        // same _entities SortedDictionary that BuildingsOrderedById() iterates; without the
+        // snapshot, spawning a unit inside the loop throws InvalidOperationException.
+        _buildingSnapshot.Clear();
         foreach (var b in world.BuildingsOrderedById())
+            _buildingSnapshot.Add(b);
+
+        foreach (var b in _buildingSnapshot)
         {
             if (b.IsDestroyed) continue;
             if (b.ProductionQueue.Count == 0) continue;
@@ -47,7 +58,8 @@ public sealed class ProductionSystem
             var u = world.CreateUnit(b.Owner, pos);
             // Set unit-type-specific stats (M3: only villager from TC; M4 will add militia).
             ApplyUnitTypeStats(u, unitTypeId);
-            player.PopCurrent += popCost;
+            // NOTE: World.CreateUnit already increments PopCurrent by 1. Do NOT add popCost
+            // again here — that would double-count and silently break the population economy.
 
             b.ProductionQueue.RemoveAt(0);
             b.ProductionProgressTicks = 0;

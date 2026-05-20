@@ -145,6 +145,8 @@ public sealed class GatheringSystem
     private static void HandleDepositing(World world, Unit u)
     {
         // Transfer all carry to player stockpile in a single tick. Then decide what's next.
+        // Deposit the carry but keep u.Carried set so the re-targeting logic below can use it
+        // as a filter key. We clear u.Carried only once we know what the unit will do next.
         if (u.CarryAmount.Raw > 0)
         {
             var player = world.GetPlayer(u.Owner);
@@ -155,7 +157,10 @@ public sealed class GatheringSystem
                 case CarryKind.Gold: player.Gold += u.CarryAmount; break;
             }
             u.CarryAmount = Fixed64.Zero;
-            u.Carried = CarryKind.None;
+            // NOTE: intentionally NOT clearing u.Carried here — FindNearbySameKind below reads
+            // it to know what kind of resource to find. It will be cleared via ClearPath/idle or
+            // left set when the unit immediately starts another gather trip (correct, since the
+            // unit is about to gather the same resource type again).
         }
 
         // If the original resource is still alive, go back to it.
@@ -166,7 +171,7 @@ public sealed class GatheringSystem
             return;
         }
 
-        // Else: try to find a same-kind resource nearby; else idle.
+        // Else: try to find a same-kind resource nearby.
         if (FindNearbySameKind(world, u, searchRadius: 15, out var newTargetId))
         {
             u.TargetEntityId = newTargetId;
@@ -174,6 +179,9 @@ public sealed class GatheringSystem
             u.PendingDestinationIdx = AdjacentTileTo(world, newTargetId);
             return;
         }
+
+        // Nothing to gather — go idle and clear the carry kind.
+        u.Carried = CarryKind.None;
         u.Behavior = BehaviorKind.Generic;
         u.TargetEntityId = EntityId.None;
     }

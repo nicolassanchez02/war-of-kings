@@ -120,11 +120,10 @@ public static class CommandProcessor
             default: return;
         }
 
-        // Find an adjacent passable tile (the AdjacentTileTo helper in GatheringSystem is
-        // private to that file; we duplicate the lightweight version here to keep dependencies
-        // one-directional).
-        int? adj = FirstPassableAdjacent(world, resX, resY);
-        if (adj is not int adjIdx) return;
+        // Spread gatherers across the 8 neighbor tiles of the resource using the same spiral
+        // used by MoveCommand. Without this, all N villagers are assigned the same tile,
+        // collide on arrival, and most exhaust their repath budget and go idle.
+        var assigned = new HashSet<int>();
 
         var ordered = new List<EntityId>(gc.Gatherers);
         ordered.Sort();
@@ -132,9 +131,36 @@ public static class CommandProcessor
         {
             if (!world.TryGetEntity(unitId, out var entity) || entity is not Entities.Unit u) continue;
             if (u.Owner != gc.Player) continue;
+
+            // Find the nearest unassigned, passable, unoccupied neighbor in canonical offset order.
+            int chosen = -1;
+            var offsets = new (int dx, int dy)[] {
+                (1,0),(-1,0),(0,1),(0,-1),
+                (1,1),(-1,1),(-1,-1),(1,-1),
+            };
+            foreach (var (dx, dy) in offsets)
+            {
+                int nx = resX + dx, ny = resY + dy;
+                if ((uint)nx >= Grid.Width || (uint)ny >= Grid.Height) continue;
+                if (!world.Map.IsPassable(nx, ny)) continue;
+                int idx = ny * Grid.Width + nx;
+                if (!world.GetOccupant(idx).IsNone) continue;
+                if (!assigned.Add(idx)) continue;
+                chosen = idx;
+                break;
+            }
+            // If all 8 neighbors are already claimed or blocked, fall back to the first
+            // passable neighbor (GatheringSystem will sort out adjacency on arrival).
+            if (chosen < 0)
+            {
+                int? fallback = FirstPassableAdjacent(world, resX, resY);
+                if (fallback is not int fb) continue;
+                chosen = fb;
+            }
+
             u.TargetEntityId = gc.ResourceNode;
             u.Behavior = Entities.BehaviorKind.GoingToResource;
-            u.PendingDestinationIdx = adjIdx;
+            u.PendingDestinationIdx = chosen;
             u.ClearPath();
             u.WaitTicks = 0;
             u.RepathsInWindow = 0;
